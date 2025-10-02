@@ -1,0 +1,3582 @@
+<!DOCTYPE html>
+	<html lang="es">
+	<head>
+	    <meta charset="UTF-8">
+	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	    <title>Leñador Mítico - Imperio Infinito</title>
+	    <style>
+	        * {
+	            margin: 0;
+	            padding: 0;
+	            box-sizing: border-box;
+	        }
+	        body {
+	            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	            min-height: 100vh;
+	            overflow-x: hidden;
+	            position: relative;
+	        }
+	        /* Morada del personaje */
+	        .morada-personaje {
+	            position: fixed;
+	            bottom: 20px;
+	            right: 20px;
+	            width: 200px;
+	            height: 250px;
+	            background: linear-gradient(135deg, #8B4513, #654321);
+	            border-radius: 20px 20px 10px 10px;
+	            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+	            z-index: 997;
+	            overflow: hidden;
+	            cursor: pointer;
+	            transition: all 0.3s ease;
+	        }
+	        .morada-personaje:hover {
+	            transform: scale(1.05);
+	        }
+	        .morada-techo {
+	            position: absolute;
+	            top: 0;
+	            left: 0;
+	            right: 0;
+	            height: 80px;
+	            background: linear-gradient(135deg, #8B4513, #A0522D);
+	            border-radius: 20px 20px 0 0;
+	            clip-path: polygon(0 100%, 50% 0, 100% 100%);
+	        }
+	        .morada-ventana {
+	            position: absolute;
+	            top: 30px;
+	            left: 50%;
+	            transform: translateX(-50%);
+	            width: 40px;
+	            height: 40px;
+	            background: rgba(255, 255, 200, 0.8);
+	            border-radius: 50%;
+	            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+	        }
+	        .morada-puerta {
+	            position: absolute;
+	            bottom: 0;
+	            left: 50%;
+	            transform: translateX(-50%);
+	            width: 60px;
+	            height: 80px;
+	            background: linear-gradient(to bottom, #654321, #4A3018);
+	            border-radius: 30px 30px 0 0;
+	            box-shadow: inset -5px 0 10px rgba(0, 0, 0, 0.3);
+	        }
+	        .personaje-en-morada {
+	            position: absolute;
+	            bottom: 20px;
+	            left: 50%;
+	            transform: translateX(-50%);
+	            width: 60px;
+	            height: 60px;
+	            border-radius: 50%;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            font-size: 30px;
+	            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+	            color: white;
+	            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+	            animation: personajeMoradaFloat 2s ease-in-out infinite;
+	            z-index: 1;
+	        }
+	        @keyframes personajeMoradaFloat {
+	            0%, 100% { transform: translateX(-50%) translateY(0); }
+	            50% { transform: translateX(-50%) translateY(-5px); }
+	        }
+	        .personaje-nivel-morada {
+	            position: absolute;
+	            top: -10px;
+	            right: -10px;
+	            background: #FFD700;
+	            color: #333;
+	            width: 25px;
+	            height: 25px;
+	            border-radius: 50%;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            font-weight: bold;
+	            font-size: 12px;
+	            border: 2px solid white;
+	            z-index: 2;
+	        }
+	        /* Contenedor principal */
+	        .main-container {
+	            min-height: 100vh;
+	            display: flex;
+	            justify-content: center;
+	            align-items: center;
+	            padding: 20px;
+	        }
+	        /* Menú de Selección */
+	        #menuSeleccion {
+	            background: rgba(255, 255, 255, 0.95);
+	            border-radius: 20px;
+	            padding: 30px 20px;
+	            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+	            width: 100%;
+	            max-width: 1400px;
+	            animation: fadeIn 0.5s ease;
+	        }
+	        @keyframes fadeIn {
+	            from { opacity: 0; transform: translateY(20px); }
+	            to { opacity: 1; transform: translateY(0); }
+	        }
+	        #menuSeleccion h1 {
+	            text-align: center;
+	            color: #333;
+	            margin-bottom: 10px;
+	            font-size: 2.5em;
+	            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+	        }
+	        .subtitulo {
+	            text-align: center;
+	            color: #666;
+	            margin-bottom: 20px;
+	            font-size: 1.1em;
+	        }
+	        /* Botones de guardar/cargar */
+	        .menu-buttons {
+	            display: flex;
+	            justify-content: center;
+	            gap: 20px;
+	            margin-bottom: 20px;
+	        }
+	        .menu-btn {
+	            background: linear-gradient(135deg, #667eea, #764ba2);
+	            color: white;
+	            border: none;
+	            padding: 12px 25px;
+	            border-radius: 12px;
+	            cursor: pointer;
+	            font-weight: bold;
+	            transition: all 0.3s ease;
+	            font-size: 1em;
+	            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+	        }
+	        .menu-btn:hover {
+	            transform: translateY(-2px);
+	            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+	        }
+	        .personajes-scroll {
+	            overflow-x: auto;
+	            overflow-y: hidden;
+	            padding: 10px 0;
+	            -webkit-overflow-scrolling: touch;
+	            scrollbar-width: thin;
+	            scrollbar-color: #667eea #f0f0f0;
+	        }
+	        .personajes-scroll::-webkit-scrollbar {
+	            height: 10px;
+	        }
+	        .personajes-scroll::-webkit-scrollbar-track {
+	            background: #f0f0f0;
+	            border-radius: 10px;
+	        }
+	        .personajes-scroll::-webkit-scrollbar-thumb {
+	            background: linear-gradient(90deg, #667eea, #764ba2);
+	            border-radius: 10px;
+	        }
+	        .personajes-container {
+	            display: flex;
+	            gap: 25px;
+	            min-width: max-content;
+	            padding: 0 10px;
+	        }
+	        .personaje-card {
+	            background: white;
+	            border-radius: 20px;
+	            padding: 25px;
+	            text-align: center;
+	            cursor: pointer;
+	            transition: all 0.3s ease;
+	            border: 3px solid transparent;
+	            position: relative;
+	            overflow: hidden;
+	            min-width: 300px;
+	            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+	        }
+	        .personaje-card::before {
+	            content: '';
+	            position: absolute;
+	            top: 0;
+	            left: 0;
+	            right: 0;
+	            height: 6px;
+	            background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+	        }
+	        .personaje-card:hover {
+	            transform: translateY(-8px) scale(1.02);
+	            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+	        }
+	        .personaje-card.livmoon { --color-primary: #8B5CF6; --color-secondary: #A78BFA; }
+	        .personaje-card.iris { --color-primary: #FCD34D; --color-secondary: #FDE68A; }
+	        .personaje-card.faby { --color-primary: #EC4899; --color-secondary: #F9A8D4; }
+	        .personaje-card.darkmind { --color-primary: #059669; --color-secondary: #10B981; }
+	        .personaje-card.useronexd { --color-primary: #F59E0B; --color-secondary: #FCD34D; }
+	        .personaje-card.katsin3dj { --color-primary: #8B5A2B; --color-secondary: #D2691E; }
+	        .personaje-card.joker { --color-primary: #9333EA; --color-secondary: #C084FC; }
+	        .personaje-avatar {
+	            width: 120px;
+	            height: 120px;
+	            margin: 0 auto 20px;
+	            border-radius: 50%;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            font-size: 60px;
+	            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+	            color: white;
+	            animation: float 3s ease-in-out infinite;
+	            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+	        }
+	        @keyframes float {
+	            0%, 100% { transform: translateY(0); }
+	            50% { transform: translateY(-10px); }
+	        }
+	        .personaje-nombre {
+	            font-size: 1.8em;
+	            font-weight: bold;
+	            margin-bottom: 8px;
+	            color: #333;
+	        }
+	        .personaje-raza {
+	            color: #666;
+	            margin-bottom: 15px;
+	            font-style: italic;
+	            font-size: 1.1em;
+	        }
+	        .personaje-frase {
+	            color: #888;
+	            font-size: 0.9em;
+	            font-style: italic;
+	            margin-bottom: 15px;
+	            min-height: 40px;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	        }
+	        .personaje-atributos {
+	            background: #f8f9fa;
+	            border-radius: 15px;
+	            padding: 20px;
+	            margin-top: 20px;
+	        }
+	        .atributo {
+	            display: flex;
+	            justify-content: space-between;
+	            margin-bottom: 10px;
+	            font-size: 1em;
+	        }
+	        .atributo-nombre { color: #555; font-weight: 500; }
+	        .atributo-valor { font-weight: bold; color: var(--color-primary); }
+	        .evolucion-badge {
+	            position: absolute;
+	            top: 10px;
+	            right: 10px;
+	            background: linear-gradient(135deg, #FFD700, #FFA500);
+	            color: #333;
+	            padding: 5px 10px;
+	            border-radius: 20px;
+	            font-size: 0.8em;
+	            font-weight: bold;
+	            box-shadow: 0 3px 10px rgba(255, 215, 0, 0.4);
+	        }
+	        /* Pantalla de Juego */
+	        #juego {
+	            display: none;
+	            width: 100%;
+	            max-width: 1400px;
+	            background: rgba(255, 255, 255, 0.95);
+	            border-radius: 25px;
+	            padding: 25px;
+	            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3);
+	        }
+	        .header-juego {
+	            display: flex;
+	            justify-content: space-between;
+	            align-items: center;
+	            margin-bottom: 25px;
+	            padding-bottom: 20px;
+	            border-bottom: 3px solid #e0e0e0;
+	            flex-wrap: wrap;
+	            gap: 20px;
+	        }
+	        .info-personaje {
+	            display: flex;
+	            align-items: center;
+	            gap: 20px;
+	        }
+	        .avatar-juego {
+	            width: 80px;
+	            height: 80px;
+	            border-radius: 50%;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            font-size: 40px;
+	            color: white;
+	            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+	            position: relative;
+	        }
+	        .evolucion-indicator {
+	            position: absolute;
+	            top: -5px;
+	            right: -5px;
+	            background: #FFD700;
+	            color: #333;
+	            width: 30px;
+	            height: 30px;
+	            border-radius: 50%;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            font-weight: bold;
+	            font-size: 14px;
+	            border: 2px solid white;
+	            animation: pulse 2s infinite;
+	        }
+	        @keyframes pulse {
+	            0% { transform: scale(1); }
+	            50% { transform: scale(1.1); }
+	            100% { transform: scale(1); }
+	        }
+	        .stats-personaje {
+	            display: flex;
+	            flex-direction: column;
+	        }
+	        .nombre-jugador {
+	            font-size: 1.5em;
+	            font-weight: bold;
+	            color: #333;
+	        }
+	        .raza-jugador {
+	            color: #666;
+	            font-size: 1em;
+	            margin-top: 5px;
+	        }
+	        .evolucion-actual {
+	            color: #FFD700;
+	            font-weight: bold;
+	            font-size: 0.9em;
+	            margin-top: 3px;
+	        }
+	        .recursos {
+	            display: flex;
+	            gap: 20px;
+	            flex-wrap: wrap;
+	        }
+	        .recurso {
+	            display: flex;
+	            align-items: center;
+	            gap: 12px;
+	            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+	            padding: 12px 20px;
+	            border-radius: 15px;
+	            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+	            transition: all 0.3s ease;
+	        }
+	        .recurso:hover {
+	            transform: translateY(-2px);
+	            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+	        }
+	        .recurso-icono { font-size: 28px; }
+	        .recurso-info {
+	            display: flex;
+	            flex-direction: column;
+	        }
+	        .recurso-nombre {
+	            font-size: 0.9em;
+	            color: #666;
+	        }
+	        .recurso-cantidad {
+	            font-size: 1.3em;
+	            font-weight: bold;
+	            color: #333;
+	        }
+	        .btn-menu {
+	            background: linear-gradient(135deg, #ef4444, #dc2626);
+	            color: white;
+	            border: none;
+	            padding: 12px 25px;
+	            border-radius: 12px;
+	            cursor: pointer;
+	            font-weight: bold;
+	            transition: all 0.3s ease;
+	            font-size: 1em;
+	            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+	        }
+	        .btn-menu:hover {
+	            transform: translateY(-2px);
+	            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+	        }
+	        .btn-guardar {
+	            background: linear-gradient(135deg, #10B981, #059669);
+	            color: white;
+	            border: none;
+	            padding: 12px 25px;
+	            border-radius: 12px;
+	            cursor: pointer;
+	            font-weight: bold;
+	            transition: all 0.3s ease;
+	            font-size: 1em;
+	            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+	            margin-left: 10px;
+	        }
+	        .btn-guardar:hover {
+	            transform: translateY(-2px);
+	            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+	        }
+	        /* Navegación mejorada */
+	        .navegacion-container {
+	            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+	            border-radius: 20px;
+	            padding: 15px;
+	            margin-bottom: 25px;
+	            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+	        }
+	        .tabs-container {
+	            display: flex;
+	            gap: 15px;
+	            overflow-x: auto;
+	            padding: 5px;
+	            -webkit-overflow-scrolling: touch;
+	        }
+	        .tabs-container::-webkit-scrollbar {
+	            height: 6px;
+	        }
+	        .tabs-container::-webkit-scrollbar-track {
+	            background: #e0e0e0;
+	            border-radius: 10px;
+	        }
+	        .tabs-container::-webkit-scrollbar-thumb {
+	            background: linear-gradient(90deg, #667eea, #764ba2);
+	            border-radius: 10px;
+	        }
+	        .tab-btn {
+	            background: white;
+	            border: 2px solid transparent;
+	            padding: 12px 25px;
+	            cursor: pointer;
+	            font-weight: bold;
+	            color: #666;
+	            transition: all 0.3s ease;
+	            white-space: nowrap;
+	            position: relative;
+	            border-radius: 12px;
+	            font-size: 1em;
+	            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+	        }
+	        .tab-btn:hover {
+	            transform: translateY(-2px);
+	            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+	        }
+	        .tab-btn.active {
+	            background: linear-gradient(135deg, #667eea, #764ba2);
+	            color: white;
+	            border-color: #667eea;
+	        }
+	        .tab-content {
+	            display: none;
+	            animation: slideIn 0.3s ease;
+	        }
+	        @keyframes slideIn {
+	            from { opacity: 0; transform: translateX(-20px); }
+	            to { opacity: 1; transform: translateX(0); }
+	        }
+	        .tab-content.active {
+	            display: block;
+	        }
+	        /* Área de tala mejorada */
+	        .area-tala {
+	            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+	            border-radius: 20px;
+	            padding: 40px;
+	            text-align: center;
+	            margin-bottom: 25px;
+	            position: relative;
+	            overflow: hidden;
+	        }
+	        .area-tala::before {
+	            content: '';
+	            position: absolute;
+	            top: -50%;
+	            left: -50%;
+	            width: 200%;
+	            height: 200%;
+	            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+	            animation: rotate 20s linear infinite;
+	        }
+	        @keyframes rotate {
+	            from { transform: rotate(0deg); }
+	            to { transform: rotate(360deg); }
+	        }
+	        .bosque-container {
+	            display: flex;
+	            justify-content: center;
+	            gap: 30px;
+	            margin: 30px 0;
+	            flex-wrap: wrap;
+	        }
+	        .arbol-grande {
+	            position: relative;
+	            cursor: pointer;
+	            transition: all 0.3s ease;
+	        }
+	        .arbol-grande:hover {
+	            transform: scale(1.05);
+	        }
+	        .arbol-grande:active {
+	            transform: scale(0.95);
+	        }
+	        .arbol-base {
+	            width: 80px;
+	            height: 120px;
+	            position: relative;
+	        }
+	        .arbol-tronco-grande {
+	            position: absolute;
+	            bottom: 0;
+	            left: 50%;
+	            transform: translateX(-50%);
+	            width: 30px;
+	            height: 60px;
+	            background: linear-gradient(to bottom, #8B4513, #654321);
+	            border-radius: 5px;
+	            box-shadow: inset -3px 0 8px rgba(0, 0, 0, 0.3);
+	        }
+	        .arbol-hojas-grande {
+	            position: absolute;
+	            top: 0;
+	            left: 50%;
+	            transform: translateX(-50%);
+	            width: 80px;
+	            height: 80px;
+	            background: radial-gradient(circle, #4CAF50, #2E7D32);
+	            border-radius: 50%;
+	            animation: sway 4s ease-in-out infinite;
+	            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+	        }
+	        @keyframes sway {
+	            0%, 100% { transform: translateX(-50%) rotate(-3deg); }
+	            50% { transform: translateX(-50%) rotate(3deg); }
+	        }
+	        .arbol-vida {
+	            position: absolute;
+	            bottom: -25px;
+	            left: 50%;
+	            transform: translateX(-50%);
+	            width: 60px;
+	            height: 8px;
+	            background: #e0e0e0;
+	            border-radius: 4px;
+	            overflow: hidden;
+	        }
+	        .arbol-vida-barra {
+	            height: 100%;
+	            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+	            transition: width 0.3s ease;
+	            border-radius: 4px;
+	        }
+	        .daño-critico {
+	            position: absolute;
+	            top: 50%;
+	            left: 50%;
+	            transform: translate(-50%, -50%);
+	            font-size: 40px;
+	            color: #FFD700;
+	            font-weight: bold;
+	            pointer-events: none;
+	            animation: dañoCriticoAnim 0.5s ease-out forwards;
+	            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+	        }
+	        @keyframes dañoCriticoAnim {
+	            0% {
+	                opacity: 1;
+	                transform: translate(-50%, -50%) scale(0.5);
+	            }
+	            50% {
+	                opacity: 1;
+	                transform: translate(-50%, -50%) scale(1.5);
+	            }
+	            100% {
+	                opacity: 0;
+	                transform: translate(-50%, -80%) scale(1);
+	            }
+	        }
+	        .hacha-selector {
+	            display: flex;
+	            justify-content: center;
+	            gap: 20px;
+	            margin: 20px 0;
+	            flex-wrap: wrap;
+	        }
+	        .hacha-card {
+	            background: white;
+	            border-radius: 15px;
+	            padding: 15px;
+	            text-align: center;
+	            cursor: pointer;
+	            transition: all 0.3s ease;
+	            border: 3px solid transparent;
+	            min-width: 120px;
+	            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+	        }
+	        .hacha-card:hover {
+	            transform: translateY(-3px);
+	            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+	        }
+	        .hacha-card.selected {
+	            border-color: #667eea;
+	            background: linear-gradient(135deg, #f0f4ff, #e8ecff);
+	        }
+	        .hacha-icono {
+	            font-size: 40px;
+	            margin-bottom: 10px;
+	        }
+	        .hacha-nombre {
+	            font-weight: bold;
+	            color: #333;
+	            margin-bottom: 5px;
+	        }
+	        .hacha-daño {
+	            color: #666;
+	            font-size: 0.9em;
+	        }
+	        .btn-talar {
+	            background: linear-gradient(135deg, #4CAF50, #45a049);
+	            color: white;
+	            border: none;
+	            padding: 18px 50px;
+	            font-size: 1.3em;
+	            border-radius: 15px;
+	            cursor: pointer;
+	            transition: all 0.3s ease;
+	            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+	            font-weight: bold;
+	            position: relative;
+	            overflow: hidden;
+	        }
+	        .btn-talar::before {
+	            content: '';
+	            position: absolute;
+	            top: 50%;
+	            left: 50%;
+	            width: 0;
+	            height: 0;
+	            border-radius: 50%;
+	            background: rgba(255, 255, 255, 0.3);
+	            transform: translate(-50%, -50%);
+	            transition: width 0.6s, height 0.6s;
+	        }
+	        .btn-talar:hover::before {
+	            width: 300px;
+	            height: 300px;
+	        }
+	        .btn-talar:hover {
+	            transform: translateY(-3px);
+	            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+	        }
+	        /* Monstruos */
+	        .monstruo-container {
+	            display: flex;
+	            justify-content: center;
+	            gap: 30px;
+	            margin: 30px 0;
+	            flex-wrap: wrap;
+	        }
+	        .monstruo-card {
+	            position: relative;
+	            cursor: pointer;
+	            transition: all 0.3s ease;
+	            background: linear-gradient(135deg, #ff6b6b, #c92a2a);
+	            border-radius: 20px;
+	            padding: 20px;
+	            text-align: center;
+	            color: white;
+	            box-shadow: 0 8px 25px rgba(201, 42, 42, 0.3);
+	        }
+	        .monstruo-card:hover {
+	            transform: translateY(-5px);
+	            box-shadow: 0 15px 40px rgba(201, 42, 42, 0.4);
+	        }
+	        .monstruo-icono {
+	            font-size: 60px;
+	            margin-bottom: 10px;
+	        }
+	        .monstruo-nombre {
+	            font-weight: bold;
+	            font-size: 1.2em;
+	            margin-bottom: 5px;
+	        }
+	        .monstruo-vida {
+	            background: rgba(255, 255, 255, 0.3);
+	            border-radius: 10px;
+	            padding: 5px;
+	            margin-top: 10px;
+	        }
+	        .monstruo-vida-barra {
+	            height: 8px;
+	            background: linear-gradient(90deg, #51cf66, #37b24d);
+	            border-radius: 4px;
+	            transition: width 0.3s ease;
+	        }
+	        .monstruo-recompensa {
+	            font-size: 0.9em;
+	            margin-top: 5px;
+	            opacity: 0.9;
+	        }
+	        /* Menú de construcción mejorado */
+	        .menu-construccion {
+	            position: fixed;
+	            top: 50%;
+	            left: 50%;
+	            transform: translate(-50%, -50%);
+	            background: white;
+	            border-radius: 25px;
+	            padding: 40px;
+	            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+	            z-index: 1000;
+	            max-width: 95vw;
+	            max-height: 90vh;
+	            overflow-y: auto;
+	            display: none;
+	        }
+	        .menu-construccion.active {
+	            display: block;
+	            animation: zoomIn 0.3s ease;
+	        }
+	        @keyframes zoomIn {
+	            from {
+	                opacity: 0;
+	                transform: translate(-50%, -50%) scale(0.8);
+	            }
+	            to {
+	                opacity: 1;
+	                transform: translate(-50%, -50%) scale(1);
+	            }
+	        }
+	        .construccion-header {
+	            display: flex;
+	            justify-content: space-between;
+	            align-items: center;
+	            margin-bottom: 30px;
+	            padding-bottom: 20px;
+	            border-bottom: 3px solid #e0e0e0;
+	        }
+	        .construccion-titulo {
+	            font-size: 2em;
+	            font-weight: bold;
+	            background: linear-gradient(135deg, #667eea, #764ba2);
+	            -webkit-background-clip: text;
+	            -webkit-text-fill-color: transparent;
+	            background-clip: text;
+	        }
+	        .btn-cerrar {
+	            background: #ef4444;
+	            color: white;
+	            border: none;
+	            width: 40px;
+	            height: 40px;
+	            border-radius: 50%;
+	            cursor: pointer;
+	            font-size: 20px;
+	            transition: all 0.3s ease;
+	            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+	        }
+	        .btn-cerrar:hover {
+	            transform: scale(1.1) rotate(90deg);
+	            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+	        }
+	        .categorias-construccion {
+	            display: flex;
+	            gap: 15px;
+	            margin-bottom: 25px;
+	            overflow-x: auto;
+	            padding: 10px 0;
+	        }
+	        .categoria-btn {
+	            background: #f8f9fa;
+	            border: 2px solid transparent;
+	            padding: 10px 20px;
+	            border-radius: 10px;
+	            cursor: pointer;
+	            font-weight: bold;
+	            color: #666;
+	            transition: all 0.3s ease;
+	            white-space: nowrap;
+	        }
+	        .categoria-btn:hover {
+	            background: #e9ecef;
+	            transform: translateY(-2px);
+	        }
+	        .categoria-btn.active {
+	            background: linear-gradient(135deg, #667eea, #764ba2);
+	            color: white;
+	            border-color: #667eea;
+	        }
+	        .edificios-grid {
+	            display: grid;
+	            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	            gap: 25px;
+	        }
+	        .edificio-card {
+	            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+	            border-radius: 20px;
+	            padding: 25px;
+	            text-align: center;
+	            cursor: pointer;
+	            transition: all 0.3s ease;
+	            position: relative;
+	            overflow: hidden;
+	            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+	        }
+	        .edificio-card:hover {
+	            transform: translateY(-5px) scale(1.02);
+	            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+	        }
+	        .edificio-card.construido {
+	            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+	            border: 3px solid #28a745;
+	        }
+	        .edificio-card::before {
+	            content: '';
+	            position: absolute;
+	            top: 0;
+	            left: 0;
+	            right: 0;
+	            height: 4px;
+	            background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+	        }
+	        .edificio-icono {
+	            font-size: 70px;
+	            margin-bottom: 15px;
+	            filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.2));
+	            animation: edificioFloat 3s ease-in-out infinite;
+	        }
+	        @keyframes edificioFloat {
+	            0%, 100% { transform: translateY(0); }
+	            50% { transform: translateY(-8px); }
+	        }
+	        .edificio-nombre {
+	            font-weight: bold;
+	            color: #333;
+	            margin-bottom: 8px;
+	            font-size: 1.2em;
+	        }
+	        .edificio-descripcion {
+	            color: #666;
+	            font-size: 0.95em;
+	            margin-bottom: 12px;
+	            min-height: 40px;
+	        }
+	        .edificio-produccion {
+	            color: #28a745;
+	            font-weight: bold;
+	            margin-bottom: 10px;
+	            font-size: 1.1em;
+	        }
+	        .edificio-coste {
+	            color: #666;
+	            font-size: 1em;
+	            margin-bottom: 15px;
+	        }
+	        .btn-construir {
+	            background: linear-gradient(135deg, #667eea, #764ba2);
+	            color: white;
+	            border: none;
+	            padding: 12px 25px;
+	            border-radius: 10px;
+	            cursor: pointer;
+	            font-weight: bold;
+	            transition: all 0.3s ease;
+	            width: 100%;
+	            font-size: 1em;
+	            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+	        }
+	        .btn-construir:hover:not(:disabled) {
+	            transform: translateY(-2px);
+	            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+	        }
+	        .btn-construir:disabled {
+	            opacity: 0.5;
+	            cursor: not-allowed;
+	        }
+	        /* Overlay */
+	        .overlay {
+	            position: fixed;
+	            top: 0;
+	            left: 0;
+	            right: 0;
+	            bottom: 0;
+	            background: rgba(0, 0, 0, 0.6);
+	            z-index: 999;
+	            display: none;
+	            backdrop-filter: blur(5px);
+	        }
+	        .overlay.active {
+	            display: block;
+	            animation: fadeIn 0.3s ease;
+	        }
+	        /* Bonus de retorno */
+	        .bonus-retorno {
+	            position: fixed;
+	            top: 50%;
+	            left: 50%;
+	            transform: translate(-50%, -50%);
+	            background: white;
+	            border-radius: 25px;
+	            padding: 40px;
+	            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+	            z-index: 2000;
+	            text-align: center;
+	            display: none;
+	            max-width: 90vw;
+	        }
+	        .bonus-retorno.active {
+	            display: block;
+	            animation: bounceIn 0.5s ease;
+	        }
+	        @keyframes bounceIn {
+	            0% {
+	                opacity: 0;
+	                transform: translate(-50%, -50%) scale(0.3);
+	            }
+	            50% {
+	                opacity: 1;
+	                transform: translate(-50%, -50%) scale(1.05);
+	            }
+	            100% {
+	                transform: translate(-50%, -50%) scale(1);
+	            }
+	        }
+	        .bonus-titulo {
+	            font-size: 2.5em;
+	            font-weight: bold;
+	            background: linear-gradient(135deg, #FFD700, #FFA500);
+	            -webkit-background-clip: text;
+	            -webkit-text-fill-color: transparent;
+	            background-clip: text;
+	            margin-bottom: 25px;
+	            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+	        }
+	        .bonus-icono {
+	            font-size: 100px;
+	            margin-bottom: 25px;
+	            animation: bonusGlow 2s ease-in-out infinite;
+	        }
+	        @keyframes bonusGlow {
+	            0%, 100% {
+	                transform: scale(1);
+	                filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5));
+	            }
+	            50% {
+	                transform: scale(1.1);
+	                filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8));
+	            }
+	        }
+	        .bonus-texto {
+	            font-size: 1.3em;
+	            color: #333;
+	            margin-bottom: 15px;
+	        }
+	        .bonus-recompensa {
+	            font-size: 2em;
+	            font-weight: bold;
+	            color: #28a745;
+	            margin-bottom: 30px;
+	            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+	        }
+	        .btn-reclamar {
+	            background: linear-gradient(135deg, #FFD700, #FFA500);
+	            color: #333;
+	            border: none;
+	            padding: 18px 50px;
+	            font-size: 1.3em;
+	            border-radius: 15px;
+	            cursor: pointer;
+	            font-weight: bold;
+	            transition: all 0.3s ease;
+	            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+	        }
+	        .btn-reclamar:hover {
+	            transform: translateY(-3px);
+	            box-shadow: 0 12px 35px rgba(255, 215, 0, 0.6);
+	        }
+	        /* Mejoras */
+	        .area-mejoras {
+	            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+	            border-radius: 20px;
+	            padding: 30px;
+	        }
+	        .mejoras-titulo {
+	            font-size: 1.8em;
+	            font-weight: bold;
+	            margin-bottom: 25px;
+	            background: linear-gradient(135deg, #667eea, #764ba2);
+	            -webkit-background-clip: text;
+	            -webkit-text-fill-color: transparent;
+	            background-clip: text;
+	        }
+	        .mejora-item {
+	            background: white;
+	            border-radius: 15px;
+	            padding: 20px;
+	            margin-bottom: 20px;
+	            display: flex;
+	            justify-content: space-between;
+	            align-items: center;
+	            transition: all 0.3s ease;
+	            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+	        }
+	        .mejora-item:hover {
+	            transform: translateY(-3px);
+	            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+	        }
+	        .mejora-info {
+	            flex: 1;
+	        }
+	        .mejora-nombre {
+	            font-weight: bold;
+	            color: #333;
+	            margin-bottom: 8px;
+	            font-size: 1.2em;
+	        }
+	        .mejora-descripcion {
+	            font-size: 1em;
+	            color: #666;
+	            margin-bottom: 10px;
+	        }
+	        .mejora-coste {
+	            display: flex;
+	            align-items: center;
+	            gap: 8px;
+	            color: #666;
+	            font-size: 1em;
+	        }
+	        .btn-mejora {
+	            background: linear-gradient(135deg, #667eea, #764ba2);
+	            color: white;
+	            border: none;
+	            padding: 12px 25px;
+	            border-radius: 10px;
+	            cursor: pointer;
+	            transition: all 0.3s ease;
+	            font-weight: bold;
+	            font-size: 1em;
+	            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+	            min-width: 120px;
+	        }
+	        .btn-mejora:hover:not(:disabled) {
+	            transform: translateY(-2px);
+	            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+	        }
+	        .btn-mejora:disabled {
+	            opacity: 0.5;
+	            cursor: not-allowed;
+	        }
+	        /* Habilidades */
+	        .habilidades-especiales {
+	            background: linear-gradient(135deg, #f3e7e9, #e3eeff);
+	            border-radius: 20px;
+	            padding: 30px;
+	            margin-top: 25px;
+	        }
+	        .habilidad-especial {
+	            background: white;
+	            border-radius: 15px;
+	            padding: 25px;
+	            margin-bottom: 20px;
+	            display: flex;
+	            justify-content: space-between;
+	            align-items: center;
+	            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+	            transition: all 0.3s ease;
+	        }
+	        .habilidad-especial:hover {
+	            transform: translateY(-3px);
+	            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+	        }
+	        .habilidad-info {
+	            flex: 1;
+	        }
+	        .habilidad-nombre {
+	            font-weight: bold;
+	            color: #333;
+	            margin-bottom: 8px;
+	            font-size: 1.3em;
+	        }
+	        .habilidad-descripcion {
+	            color: #666;
+	            font-size: 1em;
+	            margin-bottom: 10px;
+	        }
+	        .habilidad-cooldown {
+	            color: #999;
+	            font-size: 0.9em;
+	        }
+	        .btn-habilidad {
+	            background: linear-gradient(135deg, #f093fb, #f5576c);
+	            color: white;
+	            border: none;
+	            padding: 15px 30px;
+	            border-radius: 12px;
+	            cursor: pointer;
+	            transition: all 0.3s ease;
+	            font-weight: bold;
+	            position: relative;
+	            font-size: 1.1em;
+	            box-shadow: 0 6px 20px rgba(240, 147, 251, 0.3);
+	            min-width: 150px;
+	        }
+	        .btn-habilidad:hover:not(:disabled) {
+	            transform: translateY(-2px);
+	            box-shadow: 0 8px 25px rgba(240, 147, 251, 0.4);
+	        }
+	        .btn-habilidad:disabled {
+	            opacity: 0.5;
+	            cursor: not-allowed;
+	        }
+	        .cooldown-overlay {
+	            position: absolute;
+	            top: 0;
+	            left: 0;
+	            right: 0;
+	            bottom: 0;
+	            background: rgba(0, 0, 0, 0.7);
+	            border-radius: 12px;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            color: white;
+	            font-weight: bold;
+	            font-size: 1.1em;
+	        }
+	        /* Evolución */
+	        .evolucion-panel {
+	            background: linear-gradient(135deg, #fef3c7, #fde68a);
+	            border-radius: 20px;
+	            padding: 30px;
+	            margin-top: 25px;
+	            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+	        }
+	        .evolucion-titulo {
+	            font-size: 1.8em;
+	            font-weight: bold;
+	            margin-bottom: 20px;
+	            background: linear-gradient(135deg, #F59E0B, #D97706);
+	            -webkit-background-clip: text;
+	            -webkit-text-fill-color: transparent;
+	            background-clip: text;
+	        }
+	        .evolucion-progreso {
+	            background: white;
+	            border-radius: 15px;
+	            padding: 20px;
+	            margin-bottom: 20px;
+	        }
+	        .evolucion-barra {
+	            width: 100%;
+	            height: 30px;
+	            background: #e0e0e0;
+	            border-radius: 15px;
+	            overflow: hidden;
+	            margin-bottom: 15px;
+	            position: relative;
+	        }
+	        .evolucion-barra-fill {
+	            height: 100%;
+	            background: linear-gradient(90deg, #F59E0B, #FCD34D);
+	            transition: width 0.5s ease;
+	            border-radius: 15px;
+	            position: relative;
+	            overflow: hidden;
+	        }
+	        .evolucion-barra-fill::after {
+	            content: '';
+	            position: absolute;
+	            top: 0;
+	            left: 0;
+	            right: 0;
+	            bottom: 0;
+	            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+	            animation: shimmer 2s infinite;
+	        }
+	        @keyframes shimmer {
+	            0% { transform: translateX(-100%); }
+	            100% { transform: translateX(100%); }
+	        }
+	        .evolucion-texto {
+	            display: flex;
+	            justify-content: space-between;
+	            font-weight: bold;
+	            color: #333;
+	        }
+	        .btn-evolucionar {
+	            background: linear-gradient(135deg, #F59E0B, #D97706);
+	            color: white;
+	            border: none;
+	            padding: 15px 40px;
+	            font-size: 1.2em;
+	            border-radius: 12px;
+	            cursor: pointer;
+	            font-weight: bold;
+	            transition: all 0.3s ease;
+	            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.3);
+	            width: 100%;
+	        }
+	        .btn-evolucionar:hover:not(:disabled) {
+	            transform: translateY(-2px);
+	            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+	        }
+	        .btn-evolucionar:disabled {
+	            opacity: 0.5;
+	            cursor: not-allowed;
+	        }
+	        .evolucion-opciones {
+	            display: grid;
+	            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	            gap: 15px;
+	            margin-top: 20px;
+	        }
+	        .evolucion-opcion {
+	            background: white;
+	            border-radius: 15px;
+	            padding: 20px;
+	            text-align: center;
+	            cursor: pointer;
+	            transition: all 0.3s ease;
+	            border: 2px solid transparent;
+	            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+	        }
+	        .evolucion-opcion:hover {
+	            transform: translateY(-3px);
+	            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+	        }
+	        .evolucion-opcion.seleccionada {
+	            border-color: #667eea;
+	            background: linear-gradient(135deg, #f0f4ff, #e8ecff);
+	        }
+	        .evolucion-opcion-icono {
+	            font-size: 40px;
+	            margin-bottom: 10px;
+	        }
+	        .evolucion-opcion-nombre {
+	            font-weight: bold;
+	            color: #333;
+	            margin-bottom: 5px;
+	        }
+	        .evolucion-opcion-descripcion {
+	            color: #666;
+	            font-size: 0.9em;
+	        }
+	        /* Taller de reparación */
+	        .taller-reparacion {
+	            background: linear-gradient(135deg, #868e96, #495057);
+	            border-radius: 20px;
+	            padding: 30px;
+	            margin-top: 25px;
+	            color: white;
+	            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+	        }
+	        .taller-titulo {
+	            font-size: 1.8em;
+	            font-weight: bold;
+	            margin-bottom: 20px;
+	            text-align: center;
+	            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+	        }
+	        .arma-reparacion {
+	            background: rgba(255, 255, 255, 0.1);
+	            border-radius: 15px;
+	            padding: 20px;
+	            margin-bottom: 15px;
+	            display: flex;
+	            justify-content: space-between;
+	            align-items: center;
+	            backdrop-filter: blur(10px);
+	            border: 2px solid rgba(255, 255, 255, 0.2);
+	        }
+	        .arma-info {
+	            flex: 1;
+	        }
+	        .arma-nombre {
+	            font-weight: bold;
+	            font-size: 1.2em;
+	            margin-bottom: 5px;
+	        }
+	        .arma-durabilidad {
+	            font-size: 0.9em;
+	            opacity: 0.8;
+	            margin-bottom: 10px;
+	        }
+	        .arma-durabilidad-barra {
+	            width: 100%;
+	            height: 8px;
+	            background: rgba(255, 255, 255, 0.2);
+	            border-radius: 4px;
+	            overflow: hidden;
+	            margin-top: 5px;
+	        }
+	        .arma-durabilidad-fill {
+	            height: 100%;
+	            background: linear-gradient(90deg, #51cf66, #37b24d);
+	            border-radius: 4px;
+	            transition: width 0.3s ease;
+	        }
+	        .arma-reparacion-coste {
+	            font-size: 1.1em;
+	            color: #FFD700;
+	            font-weight: bold;
+	        }
+	        .btn-reparar {
+	            background: linear-gradient(135deg, #51cf66, #37b24d);
+	            color: white;
+	            border: none;
+	            padding: 10px 20px;
+	            border-radius: 10px;
+	            cursor: pointer;
+	            font-weight: bold;
+	            transition: all 0.3s ease;
+	            margin-left: 15px;
+	        }
+	        .btn-reparar:hover:not(:disabled) {
+	            transform: translateY(-2px);
+	            box-shadow: 0 5px 15px rgba(81, 207, 102, 0.3);
+	        }
+	        .btn-reparar:disabled {
+	            opacity: 0.5;
+	            cursor: not-allowed;
+	        }
+	        /* Centro Militar */
+	        .centro-militar {
+	            background: linear-gradient(135deg, #dc2626, #991b1b);
+	            border-radius: 20px;
+	            padding: 30px;
+	            margin-top: 25px;
+	            color: white;
+	            box-shadow: 0 8px 30px rgba(220, 38, 38, 0.3);
+	        }
+	        .centro-militar-titulo {
+	            font-size: 1.8em;
+	            font-weight: bold;
+	            margin-bottom: 20px;
+	            text-align: center;
+	            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+	        }
+	        .unidades-grid {
+	            display: grid;
+	            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	            gap: 20px;
+	            margin-top: 20px;
+	        }
+	        .unidad-card {
+	            background: rgba(255, 255, 255, 0.1);
+	            border-radius: 15px;
+	            padding: 20px;
+	            text-align: center;
+	            backdrop-filter: blur(10px);
+	            border: 2px solid rgba(255, 255, 255, 0.2);
+	            transition: all 0.3s ease;
+	        }
+	        .unidad-card:hover {
+	            background: rgba(255, 255, 255, 0.15);
+	            transform: translateY(-3px);
+	        }
+	        .unidad-icono {
+	            font-size: 50px;
+	            margin-bottom: 10px;
+	        }
+	        .unidad-nombre {
+	            font-weight: bold;
+	            margin-bottom: 8px;
+	            font-size: 1.1em;
+	        }
+	        .unidad-cantidad {
+	            font-size: 1.5em;
+	            font-weight: bold;
+	            color: #FFD700;
+	        }
+	        .unidad-descripcion {
+	            font-size: 0.9em;
+	            margin-top: 8px;
+	            opacity: 0.8;
+	        }
+	        /* Efectos flotantes */
+	        .efecto-flotante {
+	            position: absolute;
+	            font-weight: bold;
+	            font-size: 1.8em;
+	            pointer-events: none;
+	            animation: floatUp 1.5s ease-out forwards;
+	            z-index: 1000;
+	            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+	        }
+	        @keyframes floatUp {
+	            0% {
+	                opacity: 1;
+	                transform: translateY(0);
+	            }
+	            100% {
+	                opacity: 0;
+	                transform: translateY(-80px);
+	            }
+	        }
+	        /* Notificaciones */
+	        .notificacion {
+	            position: fixed;
+	            top: 20px;
+	            right: 20px;
+	            background: white;
+	            padding: 20px 25px;
+	            border-radius: 15px;
+	            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+	            animation: slideIn 0.3s ease;
+	            z-index: 1000;
+	            max-width: 350px;
+	            border-left: 5px solid #4CAF50;
+	        }
+	        @keyframes slideIn {
+	            from {
+	                transform: translateX(100%);
+	                opacity: 0;
+	            }
+	            to {
+	                transform: translateX(0);
+	                opacity: 1;
+	            }
+	        }
+	        .notificacion.exito {
+	            border-left-color: #4CAF50;
+	        }
+	        .notificacion.info {
+	            border-left-color: #2196F3;
+	        }
+	        .notificacion.bonus {
+	            border-left-color: #FFD700;
+	            background: linear-gradient(135deg, #fffef0, #fff9e6);
+	        }
+	        .notificacion.evolucion {
+	            border-left-color: #F59E0B;
+	            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+	        }
+	        .notificacion.militar {
+	            border-left-color: #dc2626;
+	            background: linear-gradient(135deg, #fef2f2, #fee2e2);
+	        }
+	        .notificacion.avaricia {
+	            border-left-color: #FFD700;
+	            background: linear-gradient(135deg, #fff8dc, #ffd700);
+	        }
+	        /* Botones flotantes */
+	        .btn-construccion-flotante {
+	            position: fixed;
+	            bottom: 30px;
+	            left: 30px;
+	            width: 70px;
+	            height: 70px;
+	            border-radius: 50%;
+	            background: linear-gradient(135deg, #FFD700, #FFA500);
+	            border: none;
+	            font-size: 35px;
+	            cursor: pointer;
+	            box-shadow: 0 8px 30px rgba(255, 215, 0, 0.4);
+	            transition: all 0.3s ease;
+	            z-index: 998;
+	        }
+	        .btn-construccion-flotante:hover {
+	            transform: scale(1.1) rotate(10deg);
+	            box-shadow: 0 12px 40px rgba(255, 215, 0, 0.6);
+	        }
+	        /* Clones de Darkmind */
+	        .clone {
+	            position: fixed;
+	            width: 60px;
+	            height: 60px;
+	            border-radius: 50%;
+	            display: flex;
+	            align-items: center;
+	            justify-content: center;
+	            font-size: 30px;
+	            background: linear-gradient(135deg, #059669, #10B981);
+	            color: white;
+	            box-shadow: 0 5px 20px rgba(5, 150, 105, 0.4);
+	            cursor: pointer;
+	            animation: cloneFloat 2s ease-in-out infinite;
+	            z-index: 996;
+	            opacity: 0.8;
+	        }
+	        @keyframes cloneFloat {
+	            0%, 100% { transform: translateY(0) rotate(0deg); }
+	            50% { transform: translateY(-10px) rotate(180deg); }
+	        }
+	        /* Teletransporte de Useronexd */
+	        .teleport-effect {
+	            position: fixed;
+	            width: 100px;
+	            height: 100px;
+	            border-radius: 50%;
+	            background: radial-gradient(circle, rgba(245, 158, 11, 0.8), transparent);
+	            animation: teleportPulse 0.5s ease-out forwards;
+	            pointer-events: none;
+	            z-index: 997;
+	        }
+	        @keyframes teleportPulse {
+	            0% {
+	                transform: scale(0);
+	                opacity: 1;
+	            }
+	            100% {
+	                transform: scale(3);
+	                opacity: 0;
+	            }
+	        }
+	        /* Modal de partidas guardadas */
+	        .partidas-modal {
+	            position: fixed;
+	            top: 50%;
+	            left: 50%;
+	            transform: translate(-50%, -50%);
+	            background: white;
+	            border-radius: 25px;
+	            padding: 40px;
+	            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+	            z-index: 1000;
+	            max-width: 90vw;
+	            max-height: 90vh;
+	            overflow-y: auto;
+	            display: none;
+	        }
+	        .partidas-modal.active {
+	            display: block;
+	            animation: zoomIn 0.3s ease;
+	        }
+	        .partidas-header {
+	            display: flex;
+	            justify-content: space-between;
+	            align-items: center;
+	            margin-bottom: 30px;
+	            padding-bottom: 20px;
+	            border-bottom: 3px solid #e0e0e0;
+	        }
+	        .partidas-titulo {
+	            font-size: 2em;
+	            font-weight: bold;
+	            background: linear-gradient(135deg, #667eea, #764ba2);
+	            -webkit-background-clip: text;
+	            -webkit-text-fill-color: transparent;
+	            background-clip: text;
+	        }
+	        .partidas-lista {
+	            display: flex;
+	            flex-direction: column;
+	            gap: 15px;
+	        }
+	        .partida-item {
+	            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+	            border-radius: 15px;
+	            padding: 20px;
+	            display: flex;
+	            justify-content: space-between;
+	            align-items: center;
+	            transition: all 0.3s ease;
+	        }
+	        .partida-item:hover {
+	            transform: translateY(-2px);
+	            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+	        }
+	        .partida-info {
+	            flex: 1;
+	        }
+	        .partida-nombre {
+	            font-weight: bold;
+	            color: #333;
+	            margin-bottom: 5px;
+	            font-size: 1.2em;
+	        }
+	        .partida-detalles {
+	            color: #666;
+	            font-size: 0.9em;
+	        }
+	        .partida-acciones {
+	            display: flex;
+	            gap: 10px;
+	        }
+	        .btn-partida {
+	            background: linear-gradient(135deg, #667eea, #764ba2);
+	            color: white;
+	            border: none;
+	            padding: 10px 20px;
+	            border-radius: 10px;
+	            cursor: pointer;
+	            font-weight: bold;
+	            transition: all 0.3s ease;
+	        }
+	        .btn-partida:hover {
+	            transform: translateY(-2px);
+	            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+	        }
+	        .btn-partida.eliminar {
+	            background: linear-gradient(135deg, #ef4444, #dc2626);
+	        }
+	        .btn-partida.eliminar:hover {
+	            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+	        }
+	        /* Responsive */
+	        @media (max-width: 768px) {
+	            .header-juego {
+	                justify-content: center;
+	                text-align: center;
+	            }
+	            .recursos {
+	                justify-content: center;
+	            }
+	            .tabs-container {
+	                justify-content: center;
+	            }
+	            .edificios-grid {
+	                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	            }
+	            .morada-personaje {
+	                width: 150px;
+	                height: 200px;
+	                bottom: 10px;
+	                right: 10px;
+	            }
+	            .personaje-en-morada {
+	                width: 45px;
+	                height: 45px;
+	                font-size: 25px;
+	            }
+	            .btn-construccion-flotante {
+	                width: 60px;
+	                height: 60px;
+	                font-size: 30px;
+	                bottom: 10px;
+	                left: 10px;
+	            }
+	            .bosque-container {
+	                gap: 20px;
+	            }
+	            .arbol-base {
+	                width: 60px;
+	                height: 90px;
+	            }
+	            .arbol-tronco-grande {
+	                width: 20px;
+	                height: 40px;
+	            }
+	            .arbol-hojas-grande {
+	                width: 60px;
+	                height: 60px;
+	            }
+	        }
+	    </style>
+	</head>
+	<body>
+	    <!-- Menú de Selección -->
+	    <div id="menuSeleccion">
+	        <h1>🪓 Leñador Mítico - Imperio Infinito</h1>
+	        <p class="subtitulo">Elige tu raza y construye tu leyenda</p>
+	        <!-- Botones de guardar/cargar -->
+	        <div class="menu-buttons">
+	            <button class="menu-btn" onclick="mostrarPartidasGuardadas()">💾 Cargar Partida</button>
+	            <button class="menu-btn" onclick="mostrarOpciones()">⚙️ Opciones</button>
+	        </div>
+	        <div class="personajes-scroll">
+	            <div class="personajes-container">
+	                <div class="personaje-card livmoon" onclick="seleccionarPersonaje('livmoon')">
+	                    <div class="personaje-avatar">🌙</div>
+	                    <div class="personaje-nombre">Livmoon</div>
+	                    <div class="personaje-raza">Raza Morada</div>
+	                    <div class="personaje-frase">La luna guía mi camino...</div>
+	                    <div class="personaje-atributos">
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Poder:</span>
+	                            <span class="atributo-valor">★★★★☆</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Velocidad:</span>
+	                            <span class="atributo-valor">★★★☆☆</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Habilidad Única:</span>
+	                            <span class="atributo-valor">Luna Llena</span>
+	                        </div>
+	                    </div>
+	                </div>
+	                <div class="personaje-card iris" onclick="seleccionarPersonaje('iris')">
+	                    <div class="personaje-avatar">🧚</div>
+	                    <div class="personaje-nombre">Iris</div>
+	                    <div class="personaje-raza">Hada Amarilla Rara</div>
+	                    <div class="personaje-frase">La magia está en el aire...</div>
+	                    <div class="personaje-atributos">
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Poder:</span>
+	                            <span class="atributo-valor">★★☆☆☆</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Velocidad:</span>
+	                            <span class="atributo-valor">★★★★★</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Habilidad Única:</span>
+	                            <span class="atributo-valor">Polvo de Hadas</span>
+	                        </div>
+	                    </div>
+	                </div>
+	                <div class="personaje-card faby" onclick="seleccionarPersonaje('faby')">
+	                    <div class="personaje-avatar">👩‍💼</div>
+	                    <div class="personaje-nombre">Faby</div>
+	                    <div class="personaje-raza">Administrativa Anime</div>
+	                    <div class="personaje-frase">La eficiencia es el arte...</div>
+	                    <div class="personaje-atributos">
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Poder:</span>
+	                            <span class="atributo-valor">★★★☆☆</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Velocidad:</span>
+	                            <span class="atributo-valor">★★★☆☆</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Habilidad Única:</span>
+	                            <span class="atributo-valor">Optimización Total</span>
+	                        </div>
+	                    </div>
+	                </div>
+	                <div class="personaje-card darkmind" onclick="seleccionarPersonaje('darkmind')">
+	                    <div class="personaje-avatar">🌲</div>
+	                    <div class="personaje-nombre">Darkmind</div>
+	                    <div class="personaje-raza">Chico del Bosque</div>
+	                    <div class="personaje-frase">La furia naturaleza habla conmigo...</div>
+	                    <div class="personaje-atributos">
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Poder:</span>
+	                            <span class="atributo-valor">★★★★★</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Velocidad:</span>
+	                            <span class="atributo-valor">★★★★☆</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Habilidad Única:</span>
+	                            <span class="atributo-valor">Ejército de Clones</span>
+	                        </div>
+	                    </div>
+	                </div>
+	                <div class="personaje-card useronexd" onclick="seleccionarPersonaje('useronexd')">
+	                    <div class="personaje-avatar">⚡</div>
+	                    <div class="personaje-nombre">Useronexd</div>
+	                    <div class="personaje-raza">Gato Rayo</div>
+	                    <div class="personaje-frase">conocimiento...</div>
+	                    <div class="personaje-atributos">
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Poder:</span>
+	                            <span class="atributo-valor">★★★★★</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Velocidad:</span>
+	                            <span class="atributo-valor">★★★★★</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Habilidad Única:</span>
+	                            <span class="atributo-valor">Teletransporte</span>
+	                        </div>
+	                    </div>
+	                </div>
+	                <div class="personaje-card katsin3dj" onclick="seleccionarPersonaje('katsin3dj')">
+	                    <div class="personaje-avatar">🐱</div>
+	                    <div class="personaje-nombre">@KatSIN3DJ</div>
+	                    <div class="personaje-raza">Gato</div>
+	                    <div class="personaje-frase">intento distraerme para no pensar en ti...🥀</div>
+	                    <div class="personaje-atributos">
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Poder:</span>
+	                            <span class="atributo-valor">★★★★☆</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Velocidad:</span>
+	                            <span class="atributo-valor">★★★★★</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Habilidad Única:</span>
+	                            <span class="atributo-valor">Nueve Vidas</span>
+	                        </div>
+	                    </div>
+	                </div>
+	                <div class="personaje-card joker" onclick="seleccionarPersonaje('joker')">
+	                    <div class="personaje-avatar">🤡</div>
+	                    <div class="personaje-nombre">Joker</div>
+	                    <div class="personaje-raza">Payaso</div>
+	                    <div class="personaje-frase">¿Por qué tan serio? ¡Esto es un juego!</div>
+	                    <div class="personaje-atributos">
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Poder:</span>
+	                            <span class="atributo-valor">★★★★★</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Velocidad:</span>
+	                            <span class="atributo-valor">★★★★★</span>
+	                        </div>
+	                        <div class="atributo">
+	                            <span class="atributo-nombre">Habilidad Única:</span>
+	                            <span class="atributo-valor">Risa Diabólica</span>
+	                        </div>
+	                    </div>
+	                </div>
+	            </div>
+	        </div>
+	    </div>
+	    <!-- Pantalla de Juego -->
+	    <div id="juego">
+	        <div class="header-juego">
+	            <div class="info-personaje">
+	                <div class="avatar-juego" id="avatarJuego">
+	                    <div class="evolucion-indicator" id="evolucionIndicator">1</div>
+	                </div>
+	                <div class="stats-personaje">
+	                    <div class="nombre-jugador" id="nombreJugador"></div>
+	                    <div class="raza-jugador" id="razaJugador"></div>
+	                    <div class="evolucion-actual" id="evolucionActual">Evolución 1</div>
+	                </div>
+	            </div>
+	            <div class="recursos">
+	                <div class="recurso">
+	                    <div class="recurso-icono">🪵</div>
+	                    <div class="recurso-info">
+	                        <span class="recurso-nombre">Madera</span>
+	                        <span class="recurso-cantidad" id="cantidadMadera">0</span>
+	                    </div>
+	                </div>
+	                <div class="recurso">
+	                    <div class="recurso-icono">⭐</div>
+	                    <div class="recurso-info">
+	                        <span class="recurso-nombre">Nivel</span>
+	                        <span class="recurso-cantidad" id="nivelJugador">1</span>
+	                    </div>
+	                </div>
+	                <div class="recurso">
+	                    <div class="recurso-icono">✨</div>
+	                    <div class="recurso-info">
+	                        <span class="recurso-nombre">EXP</span>
+	                        <span class="recurso-cantidad" id="expJugador">0/100</span>
+	                    </div>
+	                </div>
+	                <div class="recurso">
+	                    <div class="recurso-icono">🏰</div>
+	                    <div class="recurso-info">
+	                        <span class="recurso-nombre">Imperio</span>
+	                        <span class="recurso-cantidad" id="cantidadEdificios">0</span>
+	                    </div>
+	                </div>
+	                <div class="recurso">
+	                    <div class="recurso-icono">⚔️</div>
+	                    <div class="recurso-info">
+	                        <span class="recurso-nombre">Unidades</span>
+	                        <span class="recurso-cantidad" id="cantidadUnidades">0</span>
+	                    </div>
+	                </div>
+	                <div class="recurso">
+	                    <div class="recurso-icono">💰</div>
+	                    <div class="recurso-info">
+	                        <span class="recurso-nombre">Oro</span>
+	                        <span class="recurso-cantidad" id="cantidadOro">0</span>
+	                    </div>
+	                </div>
+	            </div>
+	            <div>
+	                <button class="btn-menu" onclick="volverMenu()">🏠 Menú Principal</button>
+	                <button class="btn-guardar" onclick="guardarJuegoManual()">💾 Guardar</button>
+	            </div>
+	        </div>
+	        <!-- Navegación mejorada -->
+	        <div class="navegacion-container">
+	            <div class="tabs-container">
+	                <button class="tab-btn active" onclick="cambiarTab('tala')">🪓 Tala</button>
+	                <button class="tab-btn" onclick="cambiarTab('monstruos')">👹 Monstruos</button>
+	                <button class="tab-btn" onclick="cambiarTab('mejoras')">🔨 Mejoras</button>
+	                <button class="tab-btn" onclick="cambiarTab('habilidades')">✨ Habilidades</button>
+	                <button class="tab-btn" onclick="cambiarTab('evolucion')">🧬 Evolución</button>
+	                <button class="tab-btn" onclick="cambiarTab('militar')">⚔️ Militar</button>
+	                <button class="tab-btn" onclick="cambiarTab('taller')">🔧 Taller</button>
+	                <button class="tab-btn" onclick="cambiarTab('estadisticas')">📊 Estadísticas</button>
+	            </div>
+	        </div>
+	        <!-- Contenido de Tabs -->
+	        <div id="tala" class="tab-content active">
+	            <div class="area-tala">
+	                <h2 style="margin-bottom: 20px; color: #333;">🌲 Bosque Místico</h2>
+	                <!-- Selector de hachas -->
+	                <div class="hacha-selector" id="hachaSelector">
+	                    <!-- Las hachas se generarán dinámicamente -->
+	                </div>
+	                <!-- Bosque con múltiples árboles -->
+	                <div class="bosque-container" id="bosqueContainer">
+	                    <!-- Árboles se generarán dinámicamente -->
+	                </div>
+	                <button class="btn-talar" onclick="talarBosque()">🪓 Talar Bosque Entero</button>
+	            </div>
+	        </div>
+	        <div id="monstruos" class="tab-content">
+	            <div class="area-tala" style="background: linear-gradient(135deg, #ff6b6b, #c92a2a);">
+	                <h2 style="margin-bottom: 20px; color: white;">👹 Caza de Monstruos</h2>
+	                <div class="monstruo-container" id="monstruoContainer">
+	                    <!-- Monstruos se generarán dinámicamente -->
+	                </div>
+	            </div>
+	        </div>
+	        <div id="mejoras" class="tab-content">
+	            <div class="area-mejoras">
+	                <div class="mejoras-titulo">🔨 Mejoras Legendarias</div>
+	                <div id="mejorasContainer">
+	                    <!-- Las mejoras se generarán dinámicamente -->
+	                </div>
+	            </div>
+	        </div>
+	        <div id="habilidades" class="tab-content">
+	            <div class="habilidades-especiales">
+	                <div class="mejoras-titulo">✨ Habilidades Únicas de Raza</div>
+	                <div id="contenedorHabilidades"></div>
+	            </div>
+	        </div>
+	        <div id="evolucion" class="tab-content">
+	            <div class="evolucion-panel">
+	                <div class="evolucion-titulo">🧬 Sistema de Evolución</div>
+	                <div class="evolucion-progreso">
+	                    <div class="evolucion-barra">
+	                        <div class="evolucion-barra-fill" id="evolucionBarra" style="width: 0%"></div>
+	                    </div>
+	                    <div class="evolucion-texto">
+	                        <span>Puntos de Evolución</span>
+	                        <span id="evolucionPuntos">0/1000</span>
+	                    </div>
+	                </div>
+	                <div class="evolucion-opciones" id="evolucionOpciones">
+	                    <!-- Opciones de evolución -->
+	                </div>
+	                <button class="btn-evolucionar" onclick="confirmarEvolucion()" id="btnEvolucionar">Confirmar Evolución (Coste: 1000 EXP)</button>
+	            </div>
+	        </div>
+	        <div id="militar" class="tab-content">
+	            <div class="centro-militar">
+	                <div class="centro-militar-titulo">⚔️ Centro Militar</div>
+	                <div class="unidades-grid" id="unidadesGrid">
+	                    <!-- Las unidades se generarán dinámicamente -->
+	                </div>
+	            </div>
+	        </div>
+	        <div id="taller" class="tab-content">
+	            <div class="taller-reparacion">
+	                <div class="taller-titulo">🔧 Taller de Reparación (Avaricia Inc.)</div>
+	                <div id="tallerContainer">
+	                    <!-- Armas para reparar -->
+	                </div>
+	            </div>
+	        </div>
+	        <div id="estadisticas" class="tab-content">
+	            <div class="area-mejoras">
+	                <div class="mejoras-titulo">📊 Estadísticas del Imperio</div>
+	                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+	                    <div style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);">
+	                        <div style="color: #666; font-size: 1em;">Total de Árboles</div>
+	                        <div style="font-size: 2em; font-weight: bold; color: #333;" id="totalArboles">0</div>
+	                    </div>
+	                    <div style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);">
+	                        <div style="color: #666; font-size: 1em;">Madera por Segundo</div>
+	                        <div style="font-size: 2em; font-weight: bold; color: #28a745;" id="maderaPorSegundo">0</div>
+	                    </div>
+	                    <div style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);">
+	                        <div style="color: #666; font-size: 1em;">Monstruos Derrotados</div>
+	                        <div style="font-size: 2em; font-weight: bold; color: #dc2626;" id="monstruosDerrotados">0</div>
+	                    </div>
+	                    <div style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);">
+	                        <div style="color: #666; font-size: 1em;">Tiempo Jugado</div>
+	                        <div style="font-size: 2em; font-weight: bold; color: #333;" id="tiempoJugado">0s</div>
+	                    </div>
+	                    <div style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);">
+	                        <div style="color: #666; font-size: 1em;">Rango Imperial</div>
+	                        <div style="font-size: 2em; font-weight: bold; color: #FFD700;" id="rangoImperial">Novato</div>
+	                    </div>
+	                    <div style="background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);">
+	                        <div style="color: #666; font-size: 1em;">Dificultad Actual</div>
+	                        <div style="font-size: 2em; font-weight: bold; color: #dc2626;" id="dificultadActual">Normal</div>
+	                    </div>
+	                </div>
+	            </div>
+	        </div>
+	    </div>
+	    <!-- Morada del personaje -->
+	    <div class="morada-personaje" id="moradaPersonaje" style="display: none;" onclick="mostrarInfoPersonaje()">
+	        <div class="morada-techo"></div>
+	        <div class="morada-ventana"></div>
+	        <div class="morada-puerta"></div>
+	        <div class="personaje-en-morada" id="personajeEnMorada">
+	            <div class="personaje-nivel-morada" id="nivelMorada">1</div>
+	        </div>
+	    </div>
+	    <!-- Botón de construcción flotante -->
+	    <button class="btn-construccion-flotante" id="btnConstruccionFlotante" style="display: none;" onclick="abrirMenuConstruccion()">
+	        🏰
+	    </button>
+	    <!-- Overlay -->
+	    <div class="overlay" id="overlay" onclick="cerrarModales()"></div>
+	    <!-- Menú de construcción mejorado -->
+	    <div class="menu-construccion" id="menuConstruccion">
+	        <div class="construccion-header">
+	            <div class="construccion-titulo">🏰 Constructor Imperial</div>
+	            <button class="btn-cerrar" onclick="cerrarMenuConstruccion()">✕</button>
+	        </div>
+	        <!-- Categorías -->
+	        <div class="categorias-construccion">
+	            <button class="categoria-btn active" onclick="cambiarCategoria('todos')">Todos</button>
+	            <button class="categoria-btn" onclick="cambiarCategoria('basicos')">Básicos</button>
+	            <button class="categoria-btn" onclick="cambiarCategoria('militares')">Militares</button>
+	            <button class="categoria-btn" onclick="cambiarCategoria('epicos')">Épicos</button>
+	            <button class="categoria-btn" onclick="cambiarCategoria('legendarios')">Legendarios</button>
+	        </div>
+	        <div class="edificios-grid" id="edificiosGrid">
+	            <!-- Los edificios se generarán dinámicamente -->
+	        </div>
+	    </div>
+	    <!-- Modal de partidas guardadas -->
+	    <div class="partidas-modal" id="partidasModal">
+	        <div class="partidas-header">
+	            <div class="partidas-titulo">💾 Partidas Guardadas</div>
+	            <button class="btn-cerrar" onclick="cerrarPartidasModal()">✕</button>
+	        </div>
+	        <div class="partidas-lista" id="partidasLista">
+	            <!-- Las partidas se generarán dinámicamente -->
+	        </div>
+	    </div>
+	    <!-- Bonus de retorno -->
+	    <div class="bonus-retorno" id="bonusRetorno">
+	        <div class="bonus-titulo">¡BONUS DE RETORNO ÉPICO!</div>
+	        <div class="bonus-icono">🎁</div>
+	        <div class="bonus-texto">Has estado ausente por</div>
+	        <div class="bonus-recompensa" id="bonusRecompensa">+0 madera</div>
+	        <button class="btn-reclamar" onclick="reclamarBonus()">Reclamar Bonus</button>
+	    </div>
+	    <script>
+	        // Estado del juego
+	        let juego = {
+	            personaje: null,
+	            madera: 0,
+	            nivel: 1,
+	            exp: 0,
+	            expMax: 100,
+	            evolucion: 1,
+	            evolucionExp: 0,
+	            evolucionTipo: null,
+	            daño: 1,
+	            criticoChance: 0.1,
+	            criticoMultiplier: 2,
+	            autoCortador: false,
+	            autoIntervalo: null,
+	            expBonus: 1,
+	            edificios: [],
+	            unidades: [],
+	            hachaActual: 0,
+	            durabilidadHacha: 100,
+	            clones: [],
+	            monstruosDerrotados: 0,
+	            oro: 0,
+	            dificultad: 1,
+	            armas: [],
+	            habilidades: {
+	                livmoon: {
+	                    nombre: "Luna Llena",
+	                    descripcion: "Invoca el poder lunar para triplicar la producción por 45 segundos",
+	                    cooldown: 90000,
+	                    activa: false,
+	                    tipo: "produccion"
+	                },
+	                iris: {
+	                    nombre: "Polvo de Hadas",
+	                    descripcion: "Esparce polvo mágico que hace crecer 20 árboles instantáneamente",
+	                    cooldown: 60000,
+	                    activa: false,
+	                    tipo: "instantaneo"
+	                },
+	                faby: {
+	                    nombre: "Optimización Total",
+	                    descripcion: "Optimiza todo el imperio: reduce costes 75% y duplica producción por 30 segundos",
+	                    cooldown: 120000,
+	                    activa: false,
+	                    tipo: "optimizacion"
+	                },
+	                darkmind: {
+	                    nombre: "Ejército de Clones",
+	                    descripcion: "Crea 5 clones que talan árboles automáticamente durante 60 segundos",
+	                    cooldown: 75000,
+	                    activa: false,
+	                    tipo: "clones"
+	                },
+	                useronexd: {
+	                    nombre: "Furia Oscura",
+	                    descripcion: "Libera la furia del dark mundo: daño x5 durante 30 segundos",
+	                    cooldown: 60000,
+	                    activa: false,
+	                    tipo: "furia"
+	                },
+	                katsin3dj: {
+	                    nombre: "Nueve Vidas",
+	                    descripcion: "Resurrección instantánea con bonus de daño x2 por 60 segundos",
+	                    cooldown: 120000,
+	                    activa: false,
+	                    tipo: "resurreccion"
+	                },
+	                joker: {
+	                    nombre: "Risa Diabólica",
+	                    descripcion: "Provoca caos aleatorio: recursos x3 o x0.5, pero siempre ganas algo",
+	                    cooldown: 45000,
+	                    activa: false,
+	                    tipo: "caos"
+	                }
+	            },
+	            mejoras: [],
+	            estadisticas: {
+	                totalArboles: 0,
+	                tiempoJugado: 0,
+	                ultimaVisita: Date.now(),
+	                totalCriticos: 0,
+	                totalClones: 0
+	            }
+	        };
+	        // Datos de personajes mejorados
+	        const personajes = {
+	            livmoon: {
+	                nombre: "Livmoon",
+	                raza: "Raza Morada",
+	                icono: "🌙",
+	                color: "#8B5CF6",
+	                bonusDaño: 1.5,
+	                bonusExp: 1.2,
+	                evoluciones: {
+	                    luz: ["Sacerdotisa Lunar", "Guardiana Celestial", "Diosa Nocturna"],
+	                    malvada: ["Sombra Lunar", "Reina de las Pesadillas", "Señora de la Oscuridad"],
+	                    mago: ["Mago Lunar", "Hechicero Estelar", "Arcano Cósmico"]
+	                }
+	            },
+	            iris: {
+	                nombre: "Iris",
+	                raza: "Hada Amarilla Rara",
+	                icono: "🧚",
+	                color: "#FCD34D",
+	                bonusVelocidad: 2,
+	                bonusExp: 1.5,
+	                evoluciones: {
+	                    luz: ["Hada Mayor", "Reina de las Hadas", "Deidad del Polvo"],
+	                    malvada: ["Hada Oscura", "Bruja del Caos", "Reina Demoníaca"],
+	                    mago: ["Mago de las Hadas", "Hechicero Natural", "Arquimago Elemental"]
+	                }
+	            },
+	            faby: {
+	                nombre: "Faby",
+	                raza: "Administrativa Anime",
+	                icono: "👩‍💼",
+	                color: "#EC4899",
+	                bonusCostes: 0.8,
+	                bonusDaño: 1.3,
+	                evoluciones: {
+	                    luz: ["Gerente Senior", "Directora Ejecutiva", "CEO Imperial"],
+	                    malvada: ["Tirana Corporativa", "Magnate Malvada", "Emperatriz Financiera"],
+	                    mago: ["Mago Tecnológico", "Hechicero de Sistemas", "Arcano Digital"]
+	                }
+	            },
+	            darkmind: {
+	                nombre: "Darkmind",
+	                raza: "Chico del Bosque",
+	                icono: "🌲",
+	                color: "#059669",
+	                bonusDaño: 2,
+	                bonusVelocidad: 1.5,
+	                bonusEdificio: 1.5,
+	                evoluciones: {
+	                    luz: ["Guardián Forestal", "Señor de los Bosques", "Espíritu de la Naturaleza"],
+	                    malvada: ["Devorador de Bosques", "Señor de la Putrefacción", "Ente de la Desolación"],
+	                    mago: ["Mago Verde", "Hechicero Natural", "Arquimago de la Vida"]
+	                }
+	            },
+	            useronexd: {
+	                nombre: "Useronexd",
+	                raza: "Gato Rayo",
+	                icono: "⚡",
+	                color: "#F59E0B",
+	                bonusDaño: 2.5,
+	                bonusVelocidad: 3,
+	                bonusCritico: 1.5,
+	                evoluciones: {
+	                    luz: ["Gato Veloz", "Felino Thunder", "Dios Rayo"],
+	                    malvada: ["Gato Demoníaco", "Felino Sombra", "Bestia del Abismo"],
+	                    mago: ["Mago del Trueno", "Hechicero Eléctrico", "Arcano Voltáico"]
+	                }
+	            },
+	            katsin3dj: {
+	                nombre: "@KatSIN3DJ",
+	                raza: "Gato",
+	                icono: "🐱",
+	                color: "#8B5A2B",
+	                bonusDaño: 2,
+	                bonusVelocidad: 2.5,
+	                bonusResurreccion: true,
+	                evoluciones: {
+	                    luz: ["Gato Misterioso", "Felino Sombrío", "Gato Espectral"],
+	                    malvada: ["Gato Infernal", "Felino de las Sombras", "Bestia de Pesadilla"],
+	                    mago: ["Mago Felino", "Hechicero Gato", "Arquimago de los Gatos"]
+	                }
+	            },
+	            joker: {
+	                nombre: "Joker",
+	                raza: "Payaso",
+	                icono: "🤡",
+	                color: "#9333EA",
+	                bonusDaño: 3,
+	                bonusVelocidad: 2,
+	                bonusCaos: true,
+	                evoluciones: {
+	                    luz: ["Payaso Feliz", "Bufón Divino", "Dios de la Risa"],
+	                    malvada: ["Payaso Malvado", "Rey del Caos", "Señor de la Locura"],
+	                    mago: ["Mago del Caos", "Hechicero del Azar", "Arcano Impredecible"]
+	                }
+	            }
+	        };
+	        // Hachas con durabilidad
+	        const hachas = [
+	            { nombre: "Hacha Básica", icono: "🪓", daño: 1, critico: 0.05, multiplicador: 1.5, desbloqueada: true, durabilidadMax: 100 },
+	            { nombre: "Hacha de Hierro", icono: "⚒️", daño: 3, critico: 0.1, multiplicador: 2, desbloqueada: false, coste: 150, durabilidadMax: 150 },
+	            { nombre: "Hacha de Oro", icono: "🪵", daño: 5, critico: 0.15, multiplicador: 2.5, desbloqueada: false, coste: 750, durabilidadMax: 200 },
+	            { nombre: "Hacha de Diamante", icono: "💎", daño: 10, critico: 0.2, multiplicador: 3, desbloqueada: false, coste: 3000, durabilidadMax: 250 },
+	            { nombre: "Hacha Legendaria", icono: "🗡️", daño: 20, critico: 0.25, multiplicador: 4, desbloqueada: false, coste: 15000, durabilidadMax: 300 },
+	            { nombre: "Hacha Divina", icono: "✨", daño: 50, critico: 0.3, multiplicador: 5, desbloqueada: false, coste: 75000, durabilidadMax: 500 }
+	        ];
+	        // Monstruos
+	        const tiposMonstruos = [
+	            { nombre: "Goblin", icono: "👺", vida: 50, daño: 5, recompensa: { madera: 20, exp: 15, oro: 10 }, probabilidad: 0.4 },
+	            { nombre: "Orco", icono: "👹", vida: 100, daño: 10, recompensa: { madera: 50, exp: 30, oro: 25 }, probabilidad: 0.3 },
+	            { nombre: "Dragón Pequeño", icono: "🐲", vida: 200, daño: 20, recompensa: { madera: 150, exp: 80, oro: 75 }, probabilidad: 0.2 },
+	            { nombre: "Demonio", icono: "👿", vida: 300, daño: 30, recompensa: { madera: 300, exp: 150, oro: 150 }, probabilidad: 0.08 },
+	            { nombre: "Bestia Legendaria", icono: "🦖", vida: 500, daño: 50, recompensa: { madera: 1000, exp: 500, oro: 500 }, probabilidad: 0.02 }
+	        ];
+	        // Edificios mejorados con precios ajustados
+	        const edificiosMejorados = [
+	            { nombre: "Cabaña Mística", icono: "🏚️", coste: 150, produccion: 2, descripcion: "Pequeña morada mágica", categoria: "basicos" },
+	            { nombre: "Torre del Hechicero", icono: "🗼", coste: 750, produccion: 10, descripcion: "Torre llena de poder arcano", categoria: "basicos" },
+	            { nombre: "Fortaleza Elfo", icono: "🏯", coste: 3000, produccion: 50, descripcion: "Bastión de los elfos antiguos", categoria: "epicos" },
+	            { nombre: "Catedral de Luz", icono: "⛪", coste: 15000, produccion: 250, descripcion: "Monumento sagrado radiante", categoria: "epicos" },
+	            { nombre: "Castillo Dragón", icono: "🏰", coste: 75000, produccion: 1000, descripcion: "Fortaleza ancestral de dragones", categoria: "epicos" },
+	            { nombre: "Ciudad Celestial", icono: "🌆", coste: 375000, produccion: 5000, descripcion: "Metrópolis flotante en las nubes", categoria: "legendarios" },
+	            { nombre: "Reino Divino", icono: "🏛️", coste: 1500000, produccion: 25000, descripcion: "Dominio de los dioses", categoria: "legendarios" },
+	            { nombre: "Imperio Infinito", icono: "🌌", coste: 15000000, produccion: 100000, descripcion: "Imperio que trasciende el tiempo", categoria: "legendarios" },
+	            { nombre: "Cuartel Militar", icono: "⚔️", coste: 7500, produccion: 0, descripcion: "Entrena unidades básicas", categoria: "militares", tipo: "militar" },
+	            { nombre: "Academia de Guerra", icono: "🎖️", coste: 30000, produccion: 0, descripcion: "Entrena unidades élite", categoria: "militares", tipo: "militar" },
+	            { nombre: "Fortaleza Imperial", icono: "🛡️", coste: 150000, produccion: 0, descripcion: "Centro de mando supremo", categoria: "militares", tipo: "militar" }
+	        ];
+	        // Unidades militares
+	        const tiposUnidades = [
+	            { nombre: "Arquero", icono: "🏹", poder: 5, descripcion: "Unidad básica a distancia" },
+	            { nombre: "Caballero", icono: "🗡️", poder: 10, descripcion: "Guerrero pesado" },
+	            { nombre: "Mago", icono: "🔮", poder: 15, descripcion: "Conjura hechizos poderosos" },
+	            { nombre: "Dragón", icono: "🐉", poder: 50, descripcion: "Bestia legendaria" },
+	            { nombre: "Titán", icono: "🗿", poder: 100, descripcion: "Gigante ancestral" }
+	        ];
+	        // Mejoras disponibles con precios ajustados
+	        const mejorasDisponibles = [
+	            { nombre: "Taller de Hachas", icono: "🔨", descripcion: "Desbloquea nuevas hachas", coste: 300, tipo: "hachas" },
+	            { nombre: "Maestro Leñador", icono: "🪓", descripcion: "+50% más daño", coste: 750, tipo: "daño" },
+	            { nombre: "Ojo de Águila", icono: "👁️", descripcion: "+10% chance crítico", coste: 1500, tipo: "critico" },
+	            { nombre: "Fuerza Titánica", icono: "💪", descripcion: "+100% multiplicador crítico", coste: 3000, tipo: "multiplicador" },
+	            { nombre: "Ejército Automático", icono: "🤖", descripcion: "Corta automáticamente cada segundo", coste: 7500, tipo: "auto" },
+	            { nombre: "Sabiduría Antigua", icono: "📚", descripcion: "+200% más EXP", coste: 4500, tipo: "exp" },
+	            { nombre: "Constructor Maestro", icono: "🏗️", descripcion: "-50% coste edificios", coste: 15000, tipo: "constructor" }
+	        ];
+	        // Seleccionar personaje
+	        function seleccionarPersonaje(tipo) {
+	            juego.personaje = tipo;
+	            const personaje = personajes[tipo];
+	            // Aplicar bonificaciones iniciales
+	            juego.daño *= personaje.bonusDaño || 1;
+	            if (personaje.bonusCritico) {
+	                juego.criticoChance *= personaje.bonusCritico;
+	            }
+	            // Inicializar arma del personaje
+	            juego.armas.push({
+	                nombre: hachas[0].nombre,
+	                tipo: 0,
+	                durabilidad: hachas[0].durabilidadMax,
+	                durabilidadMax: hachas[0].durabilidadMax
+	            });
+	            // Ocultar menú y mostrar juego
+	            document.getElementById('menuSeleccion').style.display = 'none';
+	            document.getElementById('juego').style.display = 'block';
+	            document.getElementById('moradaPersonaje').style.display = 'block';
+	            document.getElementById('btnConstruccionFlotante').style.display = 'block';
+	            // Configurar UI del personaje
+	            document.getElementById('avatarJuego').style.background =
+	                `linear-gradient(135deg, ${personaje.color}, ${personaje.color}dd)`;
+	            document.getElementById('avatarJuego').textContent = personaje.icono;
+	            document.getElementById('personajeEnMorada').style.background =
+	                `linear-gradient(135deg, ${personaje.color}, ${personaje.color}dd)`;
+	            document.getElementById('personajeEnMorada').textContent = personaje.icono;
+	            document.getElementById('nombreJugador').textContent = personaje.nombre;
+	            document.getElementById('razaJugador').textContent = personaje.raza;
+	            document.getElementById('evolucionActual').textContent = `Evolución 1`;
+	            // Inicializar componentes
+	            inicializarHachas();
+	            inicializarBosque();
+	            inicializarMonstruos();
+	            inicializarMejoras();
+	            crearHabilidadEspecial();
+	            inicializarEdificios();
+	            inicializarUnidades();
+	            inicializarTaller();
+	            inicializarEvoluciones();
+	            // Iniciar procesos
+	            iniciarProcesosSegundoPlano();
+	            // Verificar bonus de retorno
+	            verificarBonusRetorno();
+	            // Actualizar UI
+	            actualizarUI();
+	            mostrarNotificación(`¡Bienvenido/a, ${personaje.nombre}!`, 'exito');
+	        }
+	        // Inicializar monstruos
+	        function inicializarMonstruos() {
+	            const container = document.getElementById('monstruoContainer');
+	            container.innerHTML = '';
+	            // Generar monstruos aleatorios según dificultad
+	            const numMonstruos = Math.min(3 + Math.floor(juego.dificultad / 2), 8);
+	            for (let i = 0; i < numMonstruos; i++) {
+	                const monstruo = seleccionarMonstruoAleatorio();
+	                const monstruoDiv = document.createElement('div');
+	                monstruoDiv.className = 'monstruo-card';
+	                monstruoDiv.innerHTML = `
+	                    <div class="monstruo-icono">${monstruo.icono}</div>
+	                    <div class="monstruo-nombre">${monstruo.nombre}</div>
+	                    <div class="monstruo-vida">
+	                        <div class="monstruo-vida-barra" style="width: 100%"></div>
+	                    </div>
+	                    <div class="monstruo-recompensa">
+	                        🪵${monstruo.recompensa.madera} ✨${monstruo.recompensa.exp} 💰${monstruo.recompensa.oro}
+	                    </div>
+	                `;
+	                monstruoDiv.onclick = () => atacarMonstruo(monstruo, monstruoDiv);
+	                container.appendChild(monstruoDiv);
+	            }
+	        }
+	        // Seleccionar monstruo aleatorio
+	        function seleccionarMonstruoAleatorio() {
+	            const rand = Math.random();
+	            let acumulado = 0;
+	            for (const monstruo of tiposMonstruos) {
+	                acumulado += monstruo.probabilidad * (1 + juego.dificultad * 0.1);
+	                if (rand < acumulado) {
+	                    return { ...monstruo, vidaActual: monstruo.vida * (1 + juego.dificultad * 0.2) };
+	                }
+	            }
+	            return { ...tiposMonstruos[0], vidaActual: tiposMonstruos[0].vida };
+	        }
+	        // Atacar monstruo
+	        function atacarMonstruo(monstruo, elemento) {
+	            const hacha = hachas[juego.hachaActual];
+	            const personaje = personajes[juego.personaje];
+	            let dañoTotal = juego.daño + hacha.daño;
+	            // Aplicar bonificaciones
+	            if (personaje.bonusDaño) {
+	                dañoTotal *= personaje.bonusDaño;
+	            }
+	            // Calcular crítico
+	            let criticoChance = juego.criticoChance + hacha.critico;
+	            if (personaje.bonusCritico) {
+	                criticoChance *= personaje.bonusCritico;
+	            }
+	            const esCritico = Math.random() < criticoChance;
+	            if (esCritico) {
+	                dañoTotal *= (juego.criticoMultiplier + hacha.multiplicador);
+	            }
+	            // Aplicar daño al monstruo
+	            monstruo.vidaActual -= Math.floor(dañoTotal);
+	            // Reducir durabilidad del arma
+	            const arma = juego.armas[0];
+	            arma.durabilidad -= 2;
+	            if (arma.durabilidad <= 0) {
+	                arma.durabilidad = 0;
+	                mostrarNotificación('¡Tu arma se ha roto! Repárala en el taller', 'avaricia');
+	                dañoTotal *= 0.1; // Daño reducido si arma rota
+	            }
+	            // Actualizar barra de vida del monstruo
+	            const vidaBarra = elemento.querySelector('.monstruo-vida-barra');
+	            const vidaPorcentaje = Math.max(0, monstruo.vidaActual / monstruo.vida * 100);
+	            vidaBarra.style.width = vidaPorcentaje + '%';
+	            if (monstruo.vidaActual <= 0) {
+	                // Monstruo derrotado
+	                juego.madera += monstruo.recompensa.madera;
+	                juego.exp += monstruo.recompensa.exp;
+	                juego.oro += monstruo.recompensa.oro;
+	                juego.monstruosDerrotados++;
+	                elemento.style.opacity = '0.5';
+	                elemento.style.pointerEvents = 'none';
+	                mostrarNotificación(`¡${monstruo.nombre} derrotado!`, 'militar');
+	                // Aumentar dificultad gradualmente
+	                if (juego.monstruosDerrotados % 10 === 0) {
+	                    juego.dificultad += 0.5;
+	                    mostrarNotificación(`¡Dificultad aumentada a ${juego.dificultad.toFixed(1)}!`, 'info');
+	                }
+	                // Regenerar monstruo después de un tiempo
+	                setTimeout(() => {
+	                    inicializarMonstruos();
+	                }, 5000);
+	            }
+	            actualizarUI();
+	        }
+	        // Inicializar evoluciones
+	        function inicializarEvoluciones() {
+	            const container = document.getElementById('evolucionOpciones');
+	            container.innerHTML = '';
+	            const tiposEvolucion = ['luz', 'malvada', 'mago'];
+	            const iconosEvolucion = { luz: '✨', malvada: '🌑', mago: '🔮' };
+	            const nombresEvolucion = { luz: 'Evolución de Luz', malvada: 'Evolución Malvada', mago: 'Evolución Mágica' };
+	            tiposEvolucion.forEach(tipo => {
+	                const evolucionDiv = document.createElement('div');
+	                evolucionDiv.className = 'evolucion-opcion';
+	                evolucionDiv.onclick = () => seleccionarEvolucion(tipo);
+	                evolucionDiv.innerHTML = `
+	                    <div class="evolucion-opcion-icono">${iconosEvolucion[tipo]}</div>
+	                    <div class="evolucion-opcion-nombre">${nombresEvolucion[tipo]}</div>
+	                    <div class="evolucion-opcion-descripcion">Elige tu camino</div>
+	                `;
+	                container.appendChild(evolucionDiv);
+	            });
+	        }
+	        // Seleccionar evolución
+	        function seleccionarEvolucion(tipo) {
+	            juego.evolucionTipo = tipo;
+	            document.querySelectorAll('.evolucion-opcion').forEach(el => el.classList.remove('seleccionada'));
+	            event.currentTarget.classList.add('seleccionada');
+	        }
+	        // Confirmar evolución
+	        function confirmarEvolucion() {
+	            if (!juego.evolucionTipo) {
+	                mostrarNotificación('¡Debes seleccionar un tipo de evolución!', 'info');
+	                return;
+	            }
+	            if (juego.exp >= 1000 && juego.evolucion < 3) {
+	                juego.exp -= 1000;
+	                juego.evolucion++;
+	                juego.evolucionExp = 0;
+	                const personaje = personajes[juego.personaje];
+	                const evolucionNombre = personaje.evoluciones[juego.evolucionTipo][juego.evolucion - 1];
+	                // Bonificaciones de evolución
+	                switch(juego.evolucionTipo) {
+	                    case 'luz':
+	                        juego.daño *= 1.3;
+	                        juego.expBonus *= 1.2;
+	                        break;
+	                    case 'malvada':
+	                        juego.daño *= 1.6;
+	                        juego.criticoChance += 0.1;
+	                        break;
+	                    case 'mago':
+	                        juego.daño *= 1.4;
+	                        juego.criticoMultiplier += 0.5;
+	                        break;
+	                }
+	                document.getElementById('evolucionActual').textContent = `${evolucionNombre} (Evo ${juego.evolucion})`;
+	                document.getElementById('evolucionIndicator').textContent = juego.evolucion;
+	                actualizarUI();
+	                mostrarNotificación(`¡Evolucionaste a ${evolucionNombre}!`, 'evolucion');
+	                juego.evolucionTipo = null;
+	                inicializarEvoluciones();
+	            } else {
+	                mostrarNotificación('Necesitas 1000 EXP para evolucionar', 'info');
+	            }
+	        }
+	        // Inicializar taller de reparación
+	        function inicializarTaller() {
+	            const container = document.getElementById('tallerContainer');
+	            container.innerHTML = '';
+	            juego.armas.forEach((arma, index) => {
+	                const armaDiv = document.createElement('div');
+	                armaDiv.className = 'arma-reparacion';
+	                const reparacionCoste = Math.floor((arma.durabilidadMax - arma.durabilidad) * 2);
+	                armaDiv.innerHTML = `
+	                    <div class="arma-info">
+	                        <div class="arma-nombre">${arma.nombre}</div>
+	                        <div class="arma-durabilidad">Durabilidad: ${arma.durabilidad}/${arma.durabilidadMax}</div>
+	                        <div class="arma-durabilidad-barra">
+	                            <div class="arma-durabilidad-fill" style="width: ${(arma.durabilidad/arma.durabilidadMax)*100}%"></div>
+	                        </div>
+	                    </div>
+	                    <div class="arma-reparacion-coste">💰 ${reparacionCoste}</div>
+	                    <button class="btn-reparar" onclick="repararArma(${index})" ${juego.oro < reparacionCoste ? 'disabled' : ''}>
+	                        Reparar
+	                    </button>
+	                `;
+	                container.appendChild(armaDiv);
+	            });
+	        }
+	        // Reparar arma
+	        function repararArma(index) {
+	            const arma = juego.armas[index];
+	            const reparacionCoste = Math.floor((arma.durabilidadMax - arma.durabilidad) * 2);
+	            if (juego.oro >= reparacionCoste) {
+	                juego.oro -= reparacionCoste;
+	                arma.durabilidad = arma.durabilidadMax;
+	                mostrarNotificación(`¡${arma.nombre} reparada! (Costo: ${reparacionCoste} oro)`, 'avaricia');
+	                inicializarTaller();
+	                actualizarUI();
+	            } else {
+	                mostrarNotificación('Oro insuficiente para reparar', 'info');
+	            }
+	        }
+	        // Mostrar partidas guardadas
+	        function mostrarPartidasGuardadas() {
+	            const modal = document.getElementById('partidasModal');
+	            const lista = document.getElementById('partidasLista');
+	            const overlay = document.getElementById('overlay');
+	            // Obtener partidas guardadas
+	            const partidas = obtenerPartidasGuardadas();
+	            lista.innerHTML = '';
+	            if (partidas.length === 0) {
+	                lista.innerHTML = '<p style="text-align: center; color: #666;">No hay partidas guardadas</p>';
+	            } else {
+	                partidas.forEach((partida, index) => {
+	                    const partidaDiv = document.createElement('div');
+	                    partidaDiv.className = 'partida-item';
+	                    partidaDiv.innerHTML = `
+	                        <div class="partida-info">
+	                            <div class="partida-nombre">${partida.nombre}</div>
+	                            <div class="partida-detalles">
+	                                Personaje: ${partida.personaje} | Nivel: ${partida.nivel} |
+	                                Edificios: ${partida.edificios.length} |
+	                                Fecha: ${new Date(partida.fecha).toLocaleDateString()}
+	                            </div>
+	                        </div>
+	                        <div class="partida-acciones">
+	                            <button class="btn-partida" onclick="cargarPartida(${index})">Cargar</button>
+	                            <button class="btn-partida eliminar" onclick="eliminarPartida(${index})">Eliminar</button>
+	                        </div>
+	                    `;
+	                    lista.appendChild(partidaDiv);
+	                });
+	            }
+	            modal.classList.add('active');
+	            overlay.classList.add('active');
+	        }
+	        // Cerrar modal de partidas
+	        function cerrarPartidasModal() {
+	            document.getElementById('partidasModal').classList.remove('active');
+	            document.getElementById('overlay').classList.remove('active');
+	        }
+	        // Obtener partidas guardadas
+	        function obtenerPartidasGuardadas() {
+	            const partidas = [];
+	            for (let i = 0; i < localStorage.length; i++) {
+	                const key = localStorage.key(i);
+	                if (key.startsWith('leñadorMítico_')) {
+	                    try {
+	                        const partida = JSON.parse(localStorage.getItem(key));
+	                        partidas.push({
+	                            nombre: key.replace('leñadorMítico_', ''),
+	                            ...partida
+	                        });
+	                    } catch (e) {
+	                        // Ignorar partidas corruptas
+	                    }
+	                }
+	            }
+	            return partidas.sort((a, b) => b.fecha - a.fecha);
+	        }
+	        // Guardar partida con nombre
+	        function guardarPartidaConNombre() {
+	            const nombre = prompt('Nombre para guardar la partida:');
+	            if (nombre) {
+	                juego.estadisticas.ultimaVisita = Date.now();
+	                localStorage.setItem(`leñadorMítico_${nombre}`, JSON.stringify(juego));
+	                mostrarNotificación(`Partida "${nombre}" guardada exitosamente`, 'exito');
+	            }
+	        }
+	        // Cargar partida específica
+	        function cargarPartida(index) {
+	            const partidas = obtenerPartidasGuardadas();
+	            const partida = partidas[index];
+	            if (partida) {
+	                Object.assign(juego, partida);
+	                // Restaurar estado visual
+	                document.getElementById('nivelMorada').textContent = juego.nivel;
+	                document.getElementById('evolucionIndicator').textContent = juego.evolucion;
+	                const personaje = personajes[juego.personaje];
+	                const evolucionNombre = personaje.evoluciones[juego.evolucionTipo][juego.evolucion - 1];
+	                document.getElementById('evolucionActual').textContent = `${evolucionNombre} (Evo ${juego.evolucion})`;
+	                // Ocultar modal y mostrar juego
+	                cerrarPartidasModal();
+	                document.getElementById('menuSeleccion').style.display = 'none';
+	                document.getElementById('juego').style.display = 'block';
+	                document.getElementById('moradaPersonaje').style.display = 'block';
+	                document.getElementById('btnConstruccionFlotante').style.display = 'block';
+	                // Restaurar hachas desbloqueadas
+	                if (juego.hachaActual) {
+	                    hachas[juego.hachaActual].desbloqueada = true;
+	                }
+	                // Restaurar edificios construidos
+	                juego.edificios.forEach(edificioIndex => {
+	                    const edificio = edificiosMejorados[edificioIndex];
+	                    // Se actualizará visualmente cuando se abra el menú
+	                });
+	                // Reiniciar procesos
+	                if (juego.autoCortador) {
+	                    iniciarAutoCortador();
+	                }
+	                if (juego.edificios.length > 0) {
+	                    iniciarProcesosSegundoPlano();
+	                }
+	                actualizarUI();
+	                inicializarHachas();
+	                inicializarUnidades();
+	                inicializarBosque();
+	                inicializarMonstruos();
+	                inicializarMejoras();
+	                crearHabilidadEspecial();
+	                inicializarEdificios();
+	                inicializarTaller();
+	                inicializarEvoluciones();
+	                mostrarNotificación(`Partida "${partida.nombre}" cargada exitosamente`, 'exito');
+	            }
+	        }
+	        // Eliminar partida
+	        function eliminarPartida(index) {
+	            const partidas = obtenerPartidasGuardadas();
+	            const partida = partidas[index];
+	            if (partida && confirm(`¿Eliminar partida "${partida.nombre}"?`)) {
+	                localStorage.removeItem(`leñadorMítico_${partida.nombre}`);
+	                mostrarPartidasGuardadas(); // Recargar lista
+	                mostrarNotificación(`Partida "${partida.nombre}" eliminada`, 'info');
+	            }
+	        }
+	        // Mostrar opciones
+	        function mostrarOpciones() {
+	            alert('Opciones del juego:\n\n• Sonido: Activado\n• Calidad gráfica: Alta\n• Auto-guardado: Cada 15 segundos\n• Atajos de teclado: Espacio (talar), Q (habilidad), C (construir), M (monstruos)\n\nMás opciones próximamente...');
+	        }
+	        // Cerrar todos los modales
+	        function cerrarModales() {
+	            cerrarMenuConstruccion();
+	            cerrarPartidasModal();
+	        }
+	        // Inicializar hachas
+	        function inicializarHachas() {
+	            const selector = document.getElementById('hachaSelector');
+	            selector.innerHTML = '';
+	            hachas.forEach((hacha, index) => {
+	                const hachaDiv = document.createElement('div');
+	                hachaDiv.className = `hacha-card ${index === juego.hachaActual ? 'selected' : ''} ${!hacha.desbloqueada ? 'locked' : ''}`;
+	                hachaDiv.innerHTML = `
+	                    <div class="hacha-icono">${hacha.icono}</div>
+	                    <div class="hacha-nombre">${hacha.nombre}</div>
+	                    <div class="hacha-daño">Daño: ${hacha.daño} | Crítico: ${(hacha.critico * 100).toFixed(0)}%</div>
+	                    ${!hacha.desbloqueada ? `<div style="color: #666; font-size: 0.9em;">Coste: ${hacha.coste} madera</div>` : ''}
+	                    ${hacha.desbloqueada ? `<div style="color: #888; font-size: 0.8em;">Dur: ${juego.armas[0]?.durabilidad || 100}/${hacha.durabilidadMax}</div>` : ''}
+	                `;
+	                hachaDiv.onclick = () => seleccionarHacha(index);
+	                selector.appendChild(hachaDiv);
+	            });
+	        }
+	        // Seleccionar hacha
+	        function seleccionarHacha(index) {
+	            const hacha = hachas[index];
+	            if (!hacha.desbloqueada) {
+	                if (juego.madera >= hacha.coste) {
+	                    juego.madera -= hacha.coste;
+	                    hacha.desbloqueada = true;
+	                    juego.hachaActual = index;
+	                    // Añadir nueva arma al inventario
+	                    juego.armas.push({
+	                        nombre: hacha.nombre,
+	                        tipo: index,
+	                        durabilidad: hacha.durabilidadMax,
+	                        durabilidadMax: hacha.durabilidadMax
+	                    });
+	                    inicializarHachas();
+	                    inicializarTaller();
+	                    actualizarUI();
+	                    mostrarNotificación(`¡${hacha.nombre} desbloqueada!`, 'exito');
+	                } else {
+	                    mostrarNotificación('Madera insuficiente', 'info');
+	                }
+	            } else {
+	                // Cambiar a esta arma
+	                juego.hachaActual = index;
+	                const armaSeleccionada = juego.armas.find(a => a.tipo === index);
+	                if (armaSeleccionada) {
+	                    // Poner esta arma al principio del array
+	                    juego.armas = [armaSeleccionada, ...juego.armas.filter(a => a.tipo !== index)];
+	                }
+	                inicializarHachas();
+	            }
+	        }
+	        // Inicializar bosque
+	        function inicializarBosque() {
+	            const bosque = document.getElementById('bosqueContainer');
+	            bosque.innerHTML = '';
+	            for (let i = 0; i < 5; i++) {
+	                const arbolDiv = document.createElement('div');
+	                arbolDiv.className = 'arbol-grande';
+	                arbolDiv.innerHTML = `
+	                    <div class="arbol-base">
+	                        <div class="arbol-hojas-grande"></div>
+	                        <div class="arbol-tronco-grande"></div>
+	                        <div class="arbol-vida">
+	                            <div class="arbol-vida-barra" style="width: 100%"></div>
+	                        </div>
+	                    </div>
+	                `;
+	                arbolDiv.onclick = (e) => cortarArbolIndividual(e, i);
+	                bosque.appendChild(arbolDiv);
+	            }
+	        }
+	        // Cortar árbol individual
+	        function cortarArbolIndividual(event, index) {
+	            const hacha = hachas[juego.hachaActual];
+	            const personaje = personajes[juego.personaje];
+	            const arma = juego.armas[0];
+	            if (arma.durabilidad <= 0) {
+	                mostrarNotificación('¡Tu arma está rota! Repárala en el taller', 'avaricia');
+	                return;
+	            }
+	            let dañoTotal = juego.daño + hacha.daño;
+	            // Aplicar bonificaciones
+	            if (personaje.bonusDaño) {
+	                dañoTotal *= personaje.bonusDaño;
+	            }
+	            // Calcular crítico
+	            let criticoChance = juego.criticoChance + hacha.critico;
+	            if (personaje.bonusCritico) {
+	                criticoChance *= personaje.bonusCritico;
+	            }
+	            const esCritico = Math.random() < criticoChance;
+	            if (esCritico) {
+	                dañoTotal *= (juego.criticoMultiplier + hacha.multiplicador);
+	                juego.estadisticas.totalCriticos++;
+	                // Mostrar daño crítico
+	                const criticoDiv = document.createElement('div');
+	                criticoDiv.className = 'daño-critico';
+	                criticoDiv.textContent = `¡${Math.floor(dañoTotal)}!`;
+	                criticoDiv.style.left = event.clientX + 'px';
+	                criticoDiv.style.top = event.clientY + 'px';
+	                document.body.appendChild(criticoDiv);
+	                setTimeout(() => criticoDiv.remove(), 500);
+	            }
+	            juego.madera += Math.floor(dañoTotal);
+	            juego.estadisticas.totalArboles++;
+	            // Reducir durabilidad
+	            arma.durabilidad -= 1;
+	            if (arma.durabilidad <= 0) {
+	                arma.durabilidad = 0;
+	                mostrarNotificación('¡Tu arma se ha roto! Repárala en el taller', 'avaricia');
+	            }
+	            ganarExp(10);
+	            // Animar árbol
+	            const arbol = event.currentTarget;
+	            arbol.style.animation = 'none';
+	            setTimeout(() => {
+	                arbol.style.animation = 'sway 4s ease-in-out infinite';
+	            }, 10);
+	            // Efecto flotante
+	            crearEfectoFlotante(`+${Math.floor(dañoTotal)}${esCritico ? ' 💥' : ''}`, event);
+	            actualizarUI();
+	            inicializarHachas();
+	            inicializarTaller();
+	        }
+	        // Talar bosque entero
+	        function talarBosque() {
+	            const hacha = hachas[juego.hachaActual];
+	            const personaje = personajes[juego.personaje];
+	            const arma = juego.armas[0];
+	            if (arma.durabilidad <= 0) {
+	                mostrarNotificación('¡Tu arma está rota! Repárala en el taller', 'avaricia');
+	                return;
+	            }
+	            let dañoTotal = (juego.daño + hacha.daño) * 5;
+	            // Aplicar bonificaciones
+	            if (personaje.bonusDaño) {
+	                dañoTotal *= personaje.bonusDaño;
+	            }
+	            // Calcular críticos
+	            let criticos = 0;
+	            for (let i = 0; i < 5; i++) {
+	                let criticoChance = juego.criticoChance + hacha.critico;
+	                if (personaje.bonusCritico) {
+	                    criticoChance *= personaje.bonusCritico;
+	                }
+	                if (Math.random() < criticoChance) {
+	                    dañoTotal += (juego.criticoMultiplier + hacha.multiplicador - 1) * (juego.daño + hacha.daño);
+	                    criticos++;
+	                }
+	            }
+	            if (criticos > 0) {
+	                juego.estadisticas.totalCriticos += criticos;
+	                mostrarNotificación(`¡${criticos} golpes críticos!`, 'exito');
+	            }
+	            juego.madera += Math.floor(dañoTotal);
+	            juego.estadisticas.totalArboles += 5;
+	            // Reducir durabilidad significativamente
+	            arma.durabilidad -= 5;
+	            if (arma.durabilidad <= 0) {
+	                arma.durabilidad = 0;
+	                mostrarNotificación('¡Tu arma se ha roto! Repárala en el taller', 'avaricia');
+	            }
+	            ganarExp(50);
+	            // Animar todos los árboles
+	            document.querySelectorAll('.arbol-grande').forEach(arbol => {
+	                arbol.style.animation = 'none';
+	                setTimeout(() => {
+	                    arbol.style.animation = 'sway 4s ease-in-out infinite';
+	                }, 10);
+	            });
+	            // Efecto flotante central
+	            crearEfectoFlotante(`+${Math.floor(dañoTotal)} 🌲`, { clientX: window.innerWidth / 2, clientY: window.innerHeight / 2 });
+	            actualizarUI();
+	            inicializarHachas();
+	            inicializarTaller();
+	        }
+	        // Inicializar mejoras
+	        function inicializarMejoras() {
+	            const container = document.getElementById('mejorasContainer');
+	            container.innerHTML = '';
+	            mejorasDisponibles.forEach((mejora, index) => {
+	                const mejoraDiv = document.createElement('div');
+	                mejoraDiv.className = 'mejora-item';
+	                mejoraDiv.innerHTML = `
+	                    <div class="mejora-info">
+	                        <div class="mejora-nombre">${mejora.icono} ${mejora.nombre}</div>
+	                        <div class="mejora-descripcion">${mejora.descripcion}</div>
+	                        <div class="mejora-coste">
+	                            💰 Coste: <span id="costeMejora${index}">${mejora.coste}</span> madera
+	                        </div>
+	                    </div>
+	                    <button class="btn-mejora" onclick="comprarMejora('${mejora.tipo}', ${index})" id="btnMejora${index}">
+	                        Comprar
+	                    </button>
+	                `;
+	                container.appendChild(mejoraDiv);
+	            });
+	        }
+	        // Comprar mejora
+	        function comprarMejora(tipo, index) {
+	            const mejora = mejorasDisponibles[index];
+	            if (juego.madera >= mejora.coste) {
+	                juego.madera -= mejora.coste;
+	                switch(tipo) {
+	                    case 'daño':
+	                        juego.daño *= 1.5;
+	                        break;
+	                    case 'critico':
+	                        juego.criticoChance += 0.1;
+	                        break;
+	                    case 'multiplicador':
+	                        juego.criticoMultiplier += 1;
+	                        break;
+	                    case 'auto':
+	                        if (!juego.autoCortador) {
+	                            juego.autoCortador = true;
+	                            iniciarAutoCortador();
+	                        }
+	                        break;
+	                    case 'exp':
+	                        juego.expBonus *= 3;
+	                        break;
+	                    case 'constructor':
+	                        juego.edificioBonus = 0.5;
+	                        break;
+	                }
+	                juego.mejoras.push(tipo);
+	                mejora.coste = Math.floor(mejora.coste * 2);
+	                actualizarUI();
+	                inicializarMejoras();
+	                mostrarNotificación(`¡${mejora.nombre} comprada!`, 'exito');
+	            } else {
+	                mostrarNotificación('Madera insuficiente', 'info');
+	            }
+	        }
+	        // Crear habilidad especial
+	        function crearHabilidadEspecial() {
+	            const contenedor = document.getElementById('contenedorHabilidades');
+	            const habilidad = juego.habilidades[juego.personaje];
+	            contenedor.innerHTML = `
+	                <div class="habilidad-especial">
+	                    <div class="habilidad-info">
+	                        <div class="habilidad-nombre">${habilidad.nombre}</div>
+	                        <div class="habilidad-descripcion">${habilidad.descripcion}</div>
+	                        <div class="habilidad-cooldown">Cooldown: ${habilidad.cooldown / 1000}s</div>
+	                    </div>
+	                    <button class="btn-habilidad" onclick="usarHabilidad()" id="btnHabilidadEspecial">
+	                        Usar Habilidad
+	                    </button>
+	                </div>
+	            `;
+	        }
+	        // Usar habilidad especial
+	        function usarHabilidad() {
+	            const habilidad = juego.habilidades[juego.personaje];
+	            const btn = document.getElementById('btnHabilidadEspecial');
+	            if (habilidad.activa) return;
+	            habilidad.activa = true;
+	            btn.disabled = true;
+	            switch(habilidad.tipo) {
+	                case 'produccion':
+	                    const dañoOriginal = juego.daño;
+	                    juego.daño *= 3;
+	                    mostrarNotificación('¡Luna Llena activada! Producción x3', 'info');
+	                    setTimeout(() => {
+	                        juego.daño = dañoOriginal;
+	                        habilidad.activa = false;
+	                        btn.disabled = false;
+	                    }, 45000);
+	                    break;
+	                case 'instantaneo':
+	                    for (let i = 0; i < 20; i++) {
+	                        setTimeout(() => {
+	                            juego.madera += juego.daño;
+	                            ganarExp(10);
+	                        }, i * 50);
+	                    }
+	                    mostrarNotificación('¡Polvo de Hadas! +20 árboles mágicos', 'info');
+	                    setTimeout(() => {
+	                        habilidad.activa = false;
+	                        btn.disabled = false;
+	                    }, 60000);
+	                    break;
+	                case 'optimizacion':
+	                    const bonusOriginal = juego.edificioBonus;
+	                    juego.edificioBonus = 0.25;
+	                    const dañoOriginal2 = juego.daño;
+	                    juego.daño *= 2;
+	                    mostrarNotificación('¡Optimización Total! Costes -75%, Producción x2', 'info');
+	                    setTimeout(() => {
+	                        juego.edificioBonus = bonusOriginal;
+	                        juego.daño = dañoOriginal2;
+	                        habilidad.activa = false;
+	                        btn.disabled = false;
+	                    }, 30000);
+	                    break;
+	                case 'clones':
+	                    crearClones();
+	                    setTimeout(() => {
+	                        eliminarClones();
+	                        habilidad.activa = false;
+	                        btn.disabled = false;
+	                    }, 60000);
+	                    break;
+	                case 'furia':
+	                    const dañoOriginal3 = juego.daño;
+	                    juego.daño *= 5;
+	                    document.body.style.animation = 'screenShake 0.5s';
+	                    setTimeout(() => {
+	                        document.body.style.animation = '';
+	                    }, 500);
+	                    mostrarNotificación('¡FURIA OSCURA ACTIVADA! Daño x5', 'militar');
+	                    setTimeout(() => {
+	                        juego.daño = dañoOriginal3;
+	                        habilidad.activa = false;
+	                        btn.disabled = false;
+	                    }, 30000);
+	                    break;
+	                case 'resurreccion':
+	                    const dañoOriginal4 = juego.daño;
+	                    juego.daño *= 2;
+	                    juego.madera += 1000; // Bonus de resurrección
+	                    mostrarNotificación('¡NUEVE VIDAS ACTIVADAS! Resurrección con bonus', 'evolucion');
+	                    setTimeout(() => {
+	                        juego.daño = dañoOriginal4;
+	                        habilidad.activa = false;
+	                        btn.disabled = false;
+	                    }, 60000);
+	                    break;
+	                case 'caos':
+	                    const multiplicador = Math.random() < 0.5 ? 0.5 : 3;
+	                    const tipoEfecto = multiplicador > 1 ? 'POSITIVO' : 'NEGATIVO';
+	                    juego.madera = Math.floor(juego.madera * multiplicador);
+	                    juego.oro = Math.floor(juego.oro * multiplicador);
+	                    mostrarNotificación(`¡RISA DIABÓLICA! Efecto ${tipoEfectO}: x${multiplicador}`, 'militar');
+	                    setTimeout(() => {
+	                        habilidad.activa = false;
+	                        btn.disabled = false;
+	                    }, 45000);
+	                    break;
+	            }
+	            // Mostrar cooldown
+	            let cooldownRestante = habilidad.cooldown / 1000;
+	            const cooldownInterval = setInterval(() => {
+	                if (cooldownRestante > 0) {
+	                    btn.innerHTML = `<div class="cooldown-overlay">${cooldownRestante}s</div>`;
+	                    cooldownRestante--;
+	                } else {
+	                    clearInterval(cooldownInterval);
+	                    btn.innerHTML = 'Usar Habilidad';
+	                }
+	            }, 1000);
+	        }
+	        // Crear clones para Darkmind
+	        function crearClones() {
+	            for (let i = 0; i < 5; i++) {
+	                setTimeout(() => {
+	                    const clone = document.createElement('div');
+	                    clone.className = 'clone';
+	                    clone.textContent = '🌲';
+	                    clone.style.left = Math.random() * (window.innerWidth - 60) + 'px';
+	                    clone.style.top = Math.random() * (window.innerHeight - 60) + 'px';
+	                    clone.style.animationDelay = `${i * 0.2}s`;
+	                    document.body.appendChild(clone);
+	                    juego.clones.push(clone);
+	                    // Clon tala automáticamente
+	                    const cloneInterval = setInterval(() => {
+	                        if (juego.clones.includes(clone)) {
+	                            juego.madera += juego.daño * 0.5;
+	                            juego.estadisticas.totalArboles++;
+	                            juego.estadisticas.totalClones++;
+	                            actualizarUI();
+	                        } else {
+	                            clearInterval(cloneInterval);
+	                        }
+	                    }, 1000);
+	                }, i * 200);
+	            }
+	            juego.estadisticas.totalClones += 5;
+	            mostrarNotificación('¡Ejército de Clones creado!', 'militar');
+	        }
+	        // Eliminar clones
+	        function eliminarClones() {
+	            juego.clones.forEach(clone => {
+	                clone.style.animation = 'fadeOut 0.5s ease forwards';
+	                setTimeout(() => clone.remove(), 500);
+	            });
+	            juego.clones = [];
+	        }
+	        // Crear efecto de teletransporte
+	        function crearEfectoTeletransporte() {
+	            const efecto = document.createElement('div');
+	            efecto.className = 'teleport-effect';
+	            efecto.style.left = Math.random() * window.innerWidth + 'px';
+	            efecto.style.top = Math.random() * window.innerHeight + 'px';
+	            document.body.appendChild(efecto);
+	            setTimeout(() => efecto.remove(), 500);
+	        }
+	        // Inicializar unidades militares
+	        function inicializarUnidades() {
+	            const grid = document.getElementById('unidadesGrid');
+	            grid.innerHTML = '';
+	            tiposUnidades.forEach((unidad, index) => {
+	                const unidadDiv = document.createElement('div');
+	                unidadDiv.className = 'unidad-card';
+	                unidadDiv.innerHTML = `
+	                    <div class="unidad-icono">${unidad.icono}</div>
+	                    <div class="unidad-nombre">${unidad.nombre}</div>
+	                    <div class="unidad-cantidad" id="unidad${index}">0</div>
+	                    <div class="unidad-descripcion">${unidad.descripcion}</div>
+	                `;
+	                grid.appendChild(unidadDiv);
+	            });
+	            // Inicializar array de unidades
+	            if (juego.unidades.length === 0) {
+	                juego.unidades = [0, 0, 0, 0, 0];
+	            }
+	        }
+	        // Inicializar edificios
+	        function inicializarEdificios() {
+	            const grid = document.getElementById('edificiosGrid');
+	            grid.innerHTML = '';
+	            edificiosMejorados.forEach((edificio, index) => {
+	                const edificioDiv = document.createElement('div');
+	                edificioDiv.className = 'edificio-card';
+	                edificioDiv.style.setProperty('--color-primary', '#667eea');
+	                edificioDiv.style.setProperty('--color-secondary', '#764ba2');
+	                edificioDiv.innerHTML = `
+	                    <div class="edificio-icono">${edificio.icono}</div>
+	                    <div class="edificio-nombre">${edificio.nombre}</div>
+	                    <div class="edificio-descripcion">${edificio.descripcion}</div>
+	                    ${edificio.produccion > 0 ? `<div class="edificio-producción">+${edificio.produccion} madera/s</div>` : ''}
+	                    <div class="edificio-coste">Coste: ${edificio.coste} madera</div>
+	                    <button class="btn-construir" onclick="construirEdificio(${index})">Construir</button>
+	                `;
+	                grid.appendChild(edificioDiv);
+	            });
+	        }
+	        // Cambiar categoría de construcción
+	        function cambiarCategoria(categoria) {
+	            // Actualizar botones
+	            document.querySelectorAll('.categoria-btn').forEach(btn => {
+	                btn.classList.remove('active');
+	            });
+	            event.target.classList.add('active');
+	            // Filtrar edificios
+	            const grid = document.getElementById('edificiosGrid');
+	            grid.innerHTML = '';
+	            const edificiosFiltrados = categoria === 'todos'
+	                ? edificiosMejorados
+	                : edificiosMejorados.filter(e => e.categoria === categoria);
+	            edificiosFiltrados.forEach((edificio, indexOriginal) => {
+	                const indexReal = edificiosMejorados.indexOf(edificio);
+	                const edificioDiv = document.createElement('div');
+	                edificioDiv.className = 'edificio-card';
+	                if (juego.edificios.includes(indexReal)) {
+	                    edificioDiv.classList.add('construido');
+	                }
+	                edificioDiv.style.setProperty('--color-primary', '#667eea');
+	                edificioDiv.style.setProperty('--color-secondary', '#764ba2');
+	                if (juego.edificios.includes(indexReal)) {
+	                    edificioDiv.innerHTML = `
+	                        <div class="edificio-icono">${edificio.icono}</div>
+	                        <div class="edificio-nombre">${edificio.nombre}</div>
+	                        <div class="edificio-descripcion">${edificio.descripcion}</div>
+	                        ${edificio.produccion > 0 ? `<div class="edificio-producción">+${edificio.produccion} madera/s</div>` : ''}
+	                        <div style="color: #28a745; font-weight: bold;">¡CONSTRUIDO!</div>
+	                    `;
+	                } else {
+	                    edificioDiv.innerHTML = `
+	                        <div class="edificio-icono">${edificio.icono}</div>
+	                        <div class="edificio-nombre">${edificio.nombre}</div>
+	                        <div class="edificio-descripcion">${edificio.descripcion}</div>
+	                        ${edificio.produccion > 0 ? `<div class="edificio-producción">+${edificio.produccion} madera/s</div>` : ''}
+	                        <div class="edificio-coste">Coste: ${edificio.coste} madera</div>
+	                        <button class="btn-construir" onclick="construirEdificio(${indexReal})">Construir</button>
+	                    `;
+	                }
+	                grid.appendChild(edificioDiv);
+	            });
+	        }
+	        // Construir edificio
+	        function construirEdificio(index) {
+	            const edificio = edificiosMejorados[index];
+	            let coste = edificio.coste;
+	            // Aplicar bonificaciones
+	            if (juego.edificioBonus < 1) {
+	                coste = Math.floor(coste * juego.edificioBonus);
+	            }
+	            const personaje = personajes[juego.personaje];
+	            if (personaje.bonusEdificio) {
+	                coste = Math.floor(coste / personaje.bonusEdificio);
+	            }
+	            if (juego.madera >= coste) {
+	                juego.madera -= coste;
+	                juego.edificios.push(index);
+	                // Si es edificio militar, añadir unidades
+	                if (edificio.tipo === 'militar') {
+	                    const tipoUnidad = Math.floor(Math.random() * 3); // Primeras 3 unidades
+	                    juego.unidades[tipoUnidad] += Math.floor(Math.random() * 5) + 1;
+	                    actualizarUnidades();
+	                    mostrarNotificación(`¡Unidades militares reclutadas!`, 'militar');
+	                }
+	                // Iniciar producción si es el primer edificio productivo
+	                if (edificio.produccion > 0 && juego.edificios.filter(e => edificiosMejorados[e].produccion > 0).length === 1) {
+	                    if (!juego.edificioIntervalo) {
+	                        juego.edificioIntervalo = setInterval(() => {
+	                            let produccionTotal = 0;
+	                            juego.edificios.forEach(edificioIndex => {
+	                                const edificio = edificiosMejorados[edificioIndex];
+	                                if (edificio.produccion > 0) {
+	                                    produccionTotal += edificio.produccion;
+	                                }
+	                            });
+	                            juego.madera += produccionTotal;
+	                            actualizarUI();
+	                        }, 1000);
+	                    }
+	                }
+	                actualizarUI();
+	                cambiarCategoria('todos'); // Refrescar vista
+	                mostrarNotificación(`¡${edificio.nombre} construida!`, 'exito');
+	            } else {
+	                mostrarNotificación('Madera insuficiente', 'info');
+	            }
+	        }
+	        // Actualizar unidades
+	        function actualizarUnidades() {
+	            juego.unidades.forEach((cantidad, index) => {
+	                const elemento = document.getElementById(`unidad${index}`);
+	                if (elemento) {
+	                    elemento.textContent = cantidad;
+	                }
+	            });
+	            document.getElementById('cantidadUnidades').textContent = juego.unidades.reduce((a, b) => a + b, 0);
+	        }
+	        // Cambiar tab
+	        function cambiarTab(tabName) {
+	            // Ocultar todos los tabs
+	            document.querySelectorAll('.tab-content').forEach(tab => {
+	                tab.classList.remove('active');
+	            });
+	            // Desactivar todos los botones
+	            document.querySelectorAll('.tab-btn').forEach(btn => {
+	                btn.classList.remove('active');
+	            });
+	            // Mostrar tab seleccionado
+	            document.getElementById(tabName).classList.add('active');
+	            // Activar botón correspondiente
+	            event.target.classList.add('active');
+	        }
+	        // Iniciar procesos en segundo plano
+	        function iniciarProcesosSegundoPlano() {
+	            // Timer de tiempo jugado
+	            juego.tiempoIntervalo = setInterval(() => {
+	                juego.estadisticas.tiempoJugado++;
+	                actualizarEstadisticas();
+	            }, 1000);
+	            // Producción de edificios (si ya hay algunos)
+	            if (juego.edificios.length > 0 && !juego.edificioIntervalo) {
+	                juego.edificioIntervalo = setInterval(() => {
+	                    let produccionTotal = 0;
+	                    juego.edificios.forEach(edificioIndex => {
+	                        const edificio = edificiosMejorados[edificioIndex];
+	                        if (edificio.produccion > 0) {
+	                            produccionTotal += edificio.produccion;
+	                        }
+	                    });
+	                    juego.madera += produccionTotal;
+	                    actualizarUI();
+	                }, 1000);
+	            }
+	            // Generación de oro pasiva
+	            setInterval(() => {
+	                juego.oro += Math.floor(juego.nivel * 0.5);
+	                actualizarUI();
+	            }, 5000);
+	        }
+	        // Verificar bonus de retorno
+	        function verificarBonusRetorno() {
+	            const ahora = Date.now();
+	            const ultimaVisita = juego.estadisticas.ultimaVisita || ahora;
+	            const tiempoAusencia = ahora - ultimaVisita;
+	            if (tiempoAusencia > 300000) {
+	                const horasAusencia = Math.floor(tiempoAusencia / 3600000);
+	                const bonusMadera = Math.min(horasAusencia * 500, 50000);
+	                document.getElementById('bonusRecompensa').textContent = `+${bonusMadera.toLocaleString()} madera`;
+	                document.getElementById('bonusRetorno').classList.add('active');
+	            }
+	        }
+	        // Reclamar bonus
+	        function reclamarBonus() {
+	            const bonusMadera = parseInt(document.getElementById('bonusRecompensa').textContent.replace(/[^\d]/g, ''));
+	            juego.madera += bonusMadera;
+	            juego.estadisticas.ultimaVisita = Date.now();
+	            document.getElementById('bonusRetorno').classList.remove('active');
+	            actualizarUI();
+	            mostrarNotificación(`¡Bonus de ${bonusMadera.toLocaleString()} madera reclamado!`, 'bonus');
+	        }
+	        // Mostrar información del personaje
+	        function mostrarInfoPersonaje() {
+	            const personaje = personajes[juego.personaje];
+	            let evolucionNombre = `Evolución ${juego.evolucion}`;
+	            if (juego.evolucionTipo && personaje.evoluciones[juego.evolucionTipo]) {
+	                evolucionNombre = personaje.evoluciones[juego.evolucionTipo][juego.evolucion - 1];
+	            }
+	            mostrarNotificación(`${personaje.nombre} - Nivel ${juego.nivel} - ${evolucionNombre}`, 'info');
+	        }
+	        // Abrir menú de construcción
+	        function abrirMenuConstruccion() {
+	            document.getElementById('menuConstruccion').classList.add('active');
+	            document.getElementById('overlay').classList.add('active');
+	            cambiarCategoria('todos');
+	        }
+	        // Cerrar menú de construcción
+	        function cerrarMenuConstruccion() {
+	            document.getElementById('menuConstruccion').classList.remove('active');
+	            document.getElementById('overlay').classList.remove('active');
+	        }
+	        // Volver al menú principal
+	        function volverMenu() {
+	            if (confirm('¿Estás seguro de que quieres volver al menú principal? Se guardará tu progreso.')) {
+	                guardarJuego();
+	                // Limpiar intervalos
+	                if (juego.autoIntervalo) clearInterval(juego.autoIntervalo);
+	                if (juego.edificioIntervalo) clearInterval(juego.edificioIntervalo);
+	                if (juego.tiempoIntervalo) clearInterval(juego.tiempoIntervalo);
+	                if (juego.clones.length > 0) eliminarClones();
+	                // Resetear estado
+	                location.reload();
+	            }
+	        }
+	        // Guardar juego manualmente
+	        function guardarJuegoManual() {
+	            guardarPartidaConNombre();
+	        }
+	        // Ganar experiencia
+	        function ganarExp(cantidad) {
+	            const personaje = personajes[juego.personaje];
+	            let expGanada = cantidad;
+	            if (personaje.bonusExp) {
+	                expGanada *= personaje.bonusExp;
+	            }
+	            if (juego.expBonus > 1) {
+	                expGanada *= juego.expBonus;
+	            }
+	            juego.exp += Math.floor(expGanada);
+	            juego.evolucionExp += Math.floor(expGanada);
+	            // Actualizar barra de evolución
+	            const evolucionPorcentaje = Math.min((juego.evolucionExp / 1000) * 100, 100);
+	            document.getElementById('evolucionBarra').style.width = evolucionPorcentaje + '%';
+	            document.getElementById('evolucionPuntos').textContent = `${juego.evolucionExp}/1000`;
+	            // Subir de nivel
+	            while (juego.exp >= juego.expMax) {
+	                juego.exp -= juego.expMax;
+	                juego.nivel++;
+	                juego.expMax = Math.floor(juego.expMax * 1.5);
+	                juego.daño += 2;
+	                document.getElementById('nivelMorada').textContent = juego.nivel;
+	                mostrarNotificación(`¡Nivel ${juego.nivel} alcanzado!`, 'exito');
+	            }
+	            actualizarUI();
+	        }
+	        // Iniciar auto cortador
+	        function iniciarAutoCortador() {
+	            const personaje = personajes[juego.personaje];
+	            let intervalo = 1000;
+	            if (personaje.bonusVelocidad) {
+	                intervalo /= personaje.bonusVelocidad;
+	            }
+	            juego.autoIntervalo = setInterval(() => {
+	                let dañoAuto = juego.daño * 0.5;
+	                if (personaje.bonusDaño) {
+	                    dañoAuto *= personaje.bonusDaño;
+	                }
+	                juego.madera += Math.floor(dañoAuto);
+	                juego.estadisticas.totalArboles++;
+	                ganarExp(5);
+	                actualizarUI();
+	            }, intervalo);
+	        }
+	        // Actualizar estadísticas
+	        function actualizarEstadisticas() {
+	            document.getElementById('totalArboles').textContent = juego.estadisticas.totalArboles.toLocaleString();
+	            document.getElementById('monstruosDerrotados').textContent = juego.monstruosDerrotados.toLocaleString();
+	            let maderaPorSegundo = 0;
+	            juego.edificios.forEach(edificioIndex => {
+	                const edificio = edificiosMejorados[edificioIndex];
+	                if (edificio.produccion > 0) {
+	                    maderaPorSegundo += edificio.produccion;
+	                }
+	            });
+	            document.getElementById('maderaPorSegundo').textContent = maderaPorSegundo.toLocaleString();
+	            const tiempo = Math.floor(juego.estadisticas.tiempoJugado);
+	            const horas = Math.floor(tiempo / 3600);
+	            const minutos = Math.floor((tiempo % 3600) / 60);
+	            const segundos = tiempo % 60;
+	            document.getElementById('tiempoJugado').textContent =
+	                horas > 0 ? `${horas}h ${minutos}m` : `${minutos}m ${segundos}s`;
+	            // Calcular rango imperial
+	            let rango = "Novato";
+	            if (juego.edificios.length >= 2) rango = "Alcalde";
+	            if (juego.edificios.length >= 4) rango = "Gobernante";
+	            if (juego.edificios.length >= 6) rango = "Rey";
+	            if (juego.edificios.length >= 8) rango = "Emperador";
+	            if (juego.edificios.length >= 10) rango = "Dios";
+	            if (juego.evolucion >= 3) rango = "Ser Supremo";
+	            document.getElementById('rangoImperial').textContent = rango;
+	            // Actualizar dificultad
+	            let dificultadTexto = "Normal";
+	            if (juego.dificultad >= 5) dificultadTexto = "Difícil";
+	            if (juego.dificultad >= 10) dificultadTexto = "Extremo";
+	            if (juego.dificultad >= 15) dificultadTexto = "Infernal";
+	            document.getElementById('dificultadActual').textContent = dificultadTexto;
+	        }
+	        // Crear efecto flotante
+	        function crearEfectoFlotante(texto, evento) {
+	            const efecto = document.createElement('div');
+	            efecto.className = 'efecto-flotante';
+	            efecto.textContent = texto;
+	            efecto.style.color = texto.includes('💥') ? '#FFD700' : '#4CAF50';
+	            if (evento && evento.clientX) {
+	                efecto.style.left = evento.clientX + 'px';
+	                efecto.style.top = evento.clientY + 'px';
+	            } else {
+	                efecto.style.left = '50%';
+	                efecto.style.top = '50%';
+	            }
+	            document.body.appendChild(efecto);
+	            setTimeout(() => {
+	                efecto.remove();
+	            }, 1500);
+	        }
+	        // Actualizar UI
+	        function actualizarUI() {
+	            document.getElementById('cantidadMadera').textContent = Math.floor(juego.madera).toLocaleString();
+	            document.getElementById('cantidadOro').textContent = Math.floor(juego.oro).toLocaleString();
+	            document.getElementById('nivelJugador').textContent = juego.nivel;
+	            document.getElementById('expJugador').textContent = `${juego.exp}/${juego.expMax}`;
+	            document.getElementById('cantidadEdificios').textContent = juego.edificios.length;
+	            document.getElementById('nivelMorada').textContent = juego.nivel;
+	            // Actualizar unidades
+	            actualizarUnidades();
+	            // Actualizar mejoras
+	            mejorasDisponibles.forEach((mejora, index) => {
+	                const btn = document.getElementById(`btnMejora${index}`);
+	                const costeSpan = document.getElementById(`costeMejora${index}`);
+	                if (btn && costeSpan) {
+	                    costeSpan.textContent = mejora.coste.toLocaleString();
+	                    btn.disabled = juego.madera < mejora.coste || juego.mejoras.includes(mejora.tipo);
+	                }
+	            });
+	            // Actualizar evolución
+	            const evolucionPorcentaje = Math.min((juego.evolucionExp / 1000) * 100, 100);
+	            document.getElementById('evolucionBarra').style.width = evolucionPorcentaje + '%';
+	            document.getElementById('evolucionPuntos').textContent = `${juego.evolucionExp}/1000`;
+	            document.getElementById('btnEvolucionar').disabled = juego.exp < 1000 || juego.evolucion >= 3;
+	            // Actualizar estadísticas
+	            actualizarEstadisticas();
+	        }
+	        // Mostrar notificación
+	        function mostrarNotificacion(mensaje, tipo) {
+	            const notificacion = document.createElement('div');
+	            notificacion.className = `notificacion ${tipo}`;
+	            notificacion.textContent = mensaje;
+	            document.body.appendChild(notificacion);
+	            setTimeout(() => {
+	                notificacion.style.animation = 'slideIn 0.3s ease reverse';
+	                setTimeout(() => {
+	                    notificacion.remove();
+	                }, 300);
+	            }, 3000);
+	        }
+	        // Guardar juego
+	        function guardarJuego() {
+	            juego.estadisticas.ultimaVisita = Date.now();
+	            localStorage.setItem('leñadorMítico', JSON.stringify(juego));
+	        }
+	        // Cargar juego
+	        function cargarJuego() {
+	            const guardado = localStorage.getItem('leñadorMítico');
+	            if (guardado) {
+	                const datos = JSON.parse(guardado);
+	                if (datos.personaje === juego.personaje) {
+	                    Object.assign(juego, datos);
+	                    // Restaurar estado visual
+	                    document.getElementById('nivelMorada').textContent = juego.nivel;
+	                    document.getElementById('evolucionIndicator').textContent = juego.evolucion;
+	                    const personaje = personajes[juego.personaje];
+	                    let evolucionNombre = `Evolución ${juego.evolucion}`;
+	                    if (juego.evolucionTipo && personaje.evoluciones[juego.evolucionTipo]) {
+	                        evolucionNombre = personaje.evoluciones[juego.evolucionTipo][juego.evolucion - 1];
+	                    }
+	                    document.getElementById('evolucionActual').textContent = `${evolucionNombre} (Evo ${juego.evolucion})`;
+	                    // Restaurar hachas desbloqueadas
+	                    if (juego.hachaActual) {
+	                        hachas[juego.hachaActual].desbloqueada = true;
+	                    }
+	                    // Restaurar edificios construidos
+	                    juego.edificios.forEach(edificioIndex => {
+	                        const edificio = edificiosMejorados[edificioIndex];
+	                        // Se actualizará visualmente cuando se abra el menú
+	                    });
+	                    // Reiniciar procesos
+	                    if (juego.autoCortador) {
+	                        iniciarAutoCortador();
+	                    }
+	                    if (juego.edificios.length > 0) {
+	                        iniciarProcesosSegundoPlano();
+	                    }
+	                    actualizarUI();
+	                    inicializarHachas();
+	                    inicializarUnidades();
+	                    inicializarBosque();
+	                    inicializarMonstruos();
+	                    inicializarMejoras();
+	                    crearHabilidadEspecial();
+	                    inicializarEdificios();
+	                    inicializarTaller();
+	                    inicializarEvoluciones();
+	                    mostrarNotificación('Partida cargada exitosamente', 'exito');
+	                }
+	            }
+	        }
+	        // Atajos de teclado
+	        document.addEventListener('keydown', (e) => {
+	            if (document.getElementById('juego').style.display === 'block') {
+	                switch(e.code) {
+	                    case 'Space':
+	                        e.preventDefault();
+	                        talarBosque();
+	                        break;
+	                    case 'KeyQ':
+	                        usarHabilidad();
+	                        break;
+	                    case 'KeyC':
+	                        abrirMenuConstruccion();
+	                        break;
+	                    case 'KeyM':
+	                        cambiarTab('monstruos');
+	                        document.querySelectorAll('.tab-btn')[1].click();
+	                        break;
+	                    case 'KeyS':
+	                        if (e.ctrlKey || e.metaKey) {
+	                            e.preventDefault();
+	                            guardarJuegoManual();
+	                        }
+	                        break;
+	                    case 'Escape':
+	                        cerrarModales();
+	                        break;
+	                    case 'Digit1':
+	                        cambiarTab('tala');
+	                        document.querySelector('.tab-btn').click();
+	                        break;
+	                    case 'Digit2':
+	                        cambiarTab('monstruos');
+	                        document.querySelectorAll('.tab-btn')[1].click();
+	                        break;
+	                    case 'Digit3':
+	                        cambiarTab('mejoras');
+	                        document.querySelectorAll('.tab-btn')[2].click();
+	                        break;
+	                    case 'Digit4':
+	                        cambiarTab('habilidades');
+	                        document.querySelectorAll('.tab-btn')[3].click();
+	                        break;
+	                    case 'Digit5':
+	                        cambiarTab('evolucion');
+	                        document.querySelectorAll('.tab-btn')[4].click();
+	                        break;
+	                    case 'Digit6':
+	                        cambiarTab('militar');
+	                        document.querySelectorAll('.tab-btn')[5].click();
+	                        break;
+	                    case 'Digit7':
+	                        cambiarTab('taller');
+	                        document.querySelectorAll('.tab-btn')[6].click();
+	                        break;
+	                    case 'Digit8':
+	                        cambiarTab('estadisticas');
+	                        document.querySelectorAll('.tab-btn')[7].click();
+	                        break;
+	                }
+	            }
+	        });
+	        // Auto-guardado cada 15 segundos
+	        setInterval(guardarJuego, 15000);
+	        // Prevenir cierre accidental
+	        window.addEventListener('beforeunload', (e) => {
+	            if (document.getElementById('juego').style.display === 'block') {
+	                guardarJuego();
+	                e.preventDefault();
+	                e.returnValue = '';
+	            }
+	        });
+	        // Agregar animación de shake para la furia oscura
+	        const style = document.createElement('style');
+	        style.textContent = `
+	            @keyframes screenShake {
+	                0%, 100% { transform: translateX(0); }
+	                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+	                20%, 40%, 60%, 80% { transform: translateX(5px); }
+	            }
+	            @keyframes fadeOut {
+	                from { opacity: 1; }
+	                to { opacity: 0; }
+	            }
+	        `;
+	        document.head.appendChild(style);
+	    </script>
+	</body>
+	</html>
