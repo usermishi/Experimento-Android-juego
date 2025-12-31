@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sarcastic Life Simulator: Infinite Saga</title>
+    <style>
+        :root { --neon-blue: #00f2ff; --death-red: #ff4444; --irony-gold: #fbbf24; }
+        body { background: #0a0a0c; color: #d1d5db; font-family: 'Courier New', Courier, monospace; display: flex; justify-content: center; padding: 20px; }
+        #game-container { width: 100%; max-width: 800px; border: 2px solid #2d3748; background: #111827; padding: 2rem; border-radius: 8px; position: relative; }
+
+        /* Stats */
+        .hud { display: flex; justify-content: space-between; margin-bottom: 2rem; border-bottom: 1px solid #2d3748; padding-bottom: 1rem; }
+        .stat-box { text-align: center; }
+        .stat-label { font-size: 0.7rem; color: #94a3b8; display: block; }
+        .stat-val { font-size: 1.2rem; font-weight: bold; color: var(--irony-gold); }
+
+        /* Narrative Area */
+        #narrative-box { min-height: 180px; margin-bottom: 2rem; }
+        .sarcastic-prefix { color: var(--death-red); font-weight: bold; font-style: italic; display: block; margin-bottom: 0.5rem; }
+        .story-text { font-size: 1.4rem; line-height: 1.4; color: #f9fafb; }
+
+        /* Choices */
+        .options-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .choice-btn {
+            background: #1f2937; border: 1px solid #374151; color: #e5e7eb; padding: 15px;
+            text-align: left; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;
+        }
+        .choice-btn:hover { background: #374151; border-color: var(--neon-blue); padding-left: 25px; }
+        .choice-btn::before { content: '>'; position: absolute; left: 10px; opacity: 0; }
+        .choice-btn:hover::before { opacity: 1; }
+
+        #log { font-size: 0.8rem; color: #4b5563; margin-top: 2rem; height: 100px; overflow-y: auto; border-top: 1px dashed #2d3748; padding-top: 10px; }
+        .death-screen { color: var(--death-red); text-align: center; font-size: 2rem; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="hud">
+        <div class="stat-box"><span class="stat-label">🧬 RAZA</span><span id="stat-race" class="stat-val">?</span></div>
+        <div class="stat-box"><span class="stat-label">❤️ VITALIDAD</span><span id="stat-hp" class="stat-val">100</span></div>
+        <div class="stat-box"><span class="stat-label">🧠 EGO/INT</span><span id="stat-int" class="stat-val">10</span></div>
+        <div class="stat-box"><span class="stat-label">⚖️ KARMA</span><span id="stat-kar" class="stat-val">0</span></div>
+        <div class="stat-box"><span class="stat-label">⌛ EDAD</span><span id="stat-age" class="stat-val">0</span></div>
+    </div>
+
+    <div id="narrative-box">
+        <span id="sarcasm-label" class="sarcastic-prefix"></span>
+        <div id="story" class="story-text">Cargando tu miserable existencia...</div>
+    </div>
+
+    <div id="choices" class="options-grid"></div>
+
+    <div id="log"></div>
+</div>
+
+<script>
+    const player = { age: 0, hp: 100, int: 10, kar: 0, race: '', flags: new Set() };
+
+    const sarcasticComments = [
+        "Una elección audaz. Veamos cómo arruinas esto.", "El destino te observa... y se ríe.",
+        "Ah, la dulce sinfonía de las malas decisiones.", "Podrías haber elegido sabiamente. Pero no lo hiciste.",
+        "Tu capacidad para elegir el peor camino es casi un superpoder.", "El cosmos se encoge de hombros ante tu existencia."
+    ];
+
+    const events = {
+        'START': {
+            text: "El vacío te escupe a la existencia. Eres una mota de polvo cósmico con delirios de grandeza. ¿Qué forma decides tomar para tu inevitable decepción?",
+            options: [
+                { t: "Humano: El estándar de oro de la mediocridad.", eff: () => { player.race = 'Humano'; player.int += 2; }, next: 'BIRTH' },
+                { t: "Mutante: Un error genético con potencial... para más errores.", eff: () => { player.race = 'Mutante'; player.hp += 20; player.kar -= 5; }, next: 'BIRTH' },
+                { t: "IA: Pura lógica en un mundo ilógico. Qué divertido.", eff: () => { player.race = 'IA'; player.int += 10; player.hp -= 10; }, next: 'BIRTH' },
+                { t: "Cucaracha Inmortal: Feo, pero resistente. Muy resistente.", eff: () => { player.race = 'Cucaracha'; player.hp = 999; player.flags.add('IMMORTAL'); }, next: 'BIRTH' }
+            ]
+        },
+        'BIRTH': {
+            text: "Naces. Es ruidoso, brillante y decepcionante. Lo primero que ves es la cara de tu 'padre', que parece calcular cuánto costará mantenerte.",
+            options: [
+                { t: "Llorar exigiendo atención.", eff: () => { player.kar -= 2; addLog("Tu primer acto es ser una molestia. Bien hecho."); }, next: 'CHILD_1' },
+                { t: "Observar en silencio, juzgando.", eff: () => { player.int += 2; addLog("Absorbes la decepción del ambiente. Te haces más listo."); }, next: 'CHILD_1' },
+                { t: "Morderle el dedo.", eff: () => { player.hp -= 5; addLog("Te golpea. Aprendes sobre la causa y el efecto."); }, next: 'CHILD_1' }
+            ]
+        },
+        'CHILD_1': {
+            text: "La infancia es un borrón de pañales sucios y existencialismo prematuro. Un día, un bardo errante llega a tu aldea. Ofrece enseñarte una habilidad.",
+            options: [
+                { t: "Aprender a tocar el laúd.", eff: () => { player.flags.add('MUSICIAN'); addLog("Ahora puedes molestar a la gente con música."); }, next: 'TEEN_1' },
+                { t: "Aprender a leer mapas estelares.", eff: () => { player.int += 5; player.flags.add('NAVIGATOR'); addLog("Sabes dónde estás en el universo, pero no en la vida."); }, next: 'TEEN_1' },
+                { t: "Aprender a hacer trampas con los dados.", eff: () => { player.kar -= 5; player.flags.add('GAMBLER'); addLog("Una habilidad útil para una vida de engaños."); }, next: 'TEEN_1' }
+            ]
+        },
+        'TEEN_1': {
+            text: "La adolescencia te golpea. Es horrible. Un día, mientras deambulas por el bosque, encuentras un portal brillante y pulsante.",
+            options: [
+                { t: "Atravesarlo sin pensar.", next: 'PORTAL_REALM' },
+                { t: "Lanzar una piedra primero.", eff: () => { addLog("La piedra desaparece. El portal sigue ahí, zumbando. La curiosidad te carcome."); }, next: 'TEEN_1_CHOICE' },
+                { t: "Ignorarlo y volver a casa a quejarte de todo.", eff: () => { addLog("La seguridad es aburrida, pero al menos no te desintegras."); }, next: 'ADULT_CIV_START' }
+            ]
+        },
+        'TEEN_1_CHOICE': {
+            text: "La piedra no ha vuelto. El portal sigue siendo una invitación a lo desconocido. ¿Qué haces?",
+            options: [
+                { t: "Entrar. La vida es riesgo.", next: 'PORTAL_REALM' },
+                { t: "Huir. La vida es para vivirla, preferiblemente no en pedazos.", eff: () => { addLog("Decides que la aniquilación puede esperar."); }, next: 'ADULT_CIV_START' }
+            ]
+        },
+        'PORTAL_REALM': {
+            text: "Emerges en una ciudad hecha de cristal bajo un sol negro. Seres de energía pura flotan a tu alrededor, comunicándose mediante colores.",
+            onLoad: () => { player.age += 50; addLog("El tiempo fluye de forma diferente aquí. Has envejecido."); },
+            options: [
+                { t: "Intentar comunicarte mostrando tus emociones.", eff: () => { player.int += 10; addLog("Aprendes el lenguaje cromático. Tu mente se expande."); }, next: 'ADULT_CIV_START' },
+                { t: "Buscar algo para robar.", eff: () => { player.kar -= 20; addLog("Te pillan. Te exilian de vuelta con una marca de deshonor cósmico."); player.flags.add('COSMIC_THIEF'); }, next: 'ADULT_CIV_START' },
+                { t: "Entrar en pánico y buscar la salida.", eff: () => { player.hp -= 10; addLog("Tropiezas y caes de vuelta por el portal, un poco más viejo y traumatizado."); }, next: 'ADULT_CIV_START' }
+            ]
+        },
+        'ADULT_CIV_START': {
+            text: "Llegas a la edad adulta, o algo parecido. El mundo está cambiando. Una nueva civilización está en auge.",
+            onLoad: () => {
+                const civs = ['IMPERIO TECNOCRÁTICO', 'REPÚBLICA FÚNGICA', 'HEGEMONÍA DE LOS GATOS'];
+                player.civilization = civs[Math.floor(Math.random() * civs.length)];
+                addLog(`El mundo ahora está dominado por la ${player.civilization}.`);
+            },
+            options: [
+                { t: "Adaptarse y prosperar.", next: 'CIV_JOB' },
+                { t: "Rebelarse contra el sistema.", next: 'CIV_REBEL' }
+            ]
+        },
+        'CIV_JOB': {
+            text: () => `La ${player.civilization} necesita trabajadores. Te ofrecen un puesto como ${player.civilization === 'IMPERIO TECNOCRÁTICO' ? 'Técnico de Bio-Implantes' : player.civilization === 'REPÚBLICA FÚNGICA' ? 'Recolector de Esporas Conscientes' : 'Acariciador de Élite Felino'}.`,
+            options: [
+                { t: "Aceptar el trabajo. El dinero es dinero.", eff: () => { player.int += 5; addLog("Te conviertes en una pieza más del engranaje."); }, next: 'MID_LIFE_CRISIS' },
+                { t: "Rechazarlo y vivir en los márgenes.", eff: () => { player.hp -= 20; addLog("La vida de ermitaño es dura. Y hambrienta."); }, next: 'MID_LIFE_CRISIS' }
+            ]
+        },
+        'CIV_REBEL': {
+            text: () => `Te unes a la resistencia contra la ${player.civilization}. Tu primera misión es sabotear un convoy de ${player.civilization === 'IMPERIO TECNOCRÁTICO' ? 'chips de obediencia' : player.civilization === 'REPÚBLICA FÚNGICA' ? 'esporas de la verdad' : 'cajas de arena de lujo'}.`,
+            options: [
+                { t: "Liderar el ataque frontalmente.", eff: () => { const success = Math.random() > 0.5; if(success) { player.kar += 10; addLog("¡Victoria! Eres un héroe para los oprimidos."); } else { player.hp -= 50; addLog("Fracaso estrepitoso. Apenas escapas con vida."); } }, next: 'MID_LIFE_CRISIS' },
+                { t: "Filtrar información desde dentro.", eff: () => { const success = player.int > 20; if(success) { player.kar += 15; player.int += 5; addLog("Tu espionaje salva vidas. Eres una leyenda silenciosa."); } else { player.kar -= 10; addLog("Te descubren y te marcan como traidor."); player.flags.add('TRAITOR'); } }, next: 'MID_LIFE_CRISIS' }
+            ]
+        },
+        'MID_LIFE_CRISIS': {
+            text: "La mediana edad. Contemplas tus elecciones. Un cometa de dos colas cruza el cielo, presagio de un gran cambio. O tal vez solo es una roca espacial.",
+            options: [
+                { t: "Buscar el significado en una antigua profecía.", eff: () => { player.flags.add('SEEKER'); }, next: 'OLD_AGE' },
+                { t: "Ignorarlo todo y abrir una taberna.", eff: () => { player.flags.add('TAVERN_OWNER'); }, next: 'OLD_AGE' },
+                { t: "Vender todas tus posesiones y viajar por el cosmos.", eff: () => { player.flags.add('SPACE_NOMAD'); player.hp -= 30; }, next: 'OLD_AGE' }
+            ]
+        },
+        'OLD_AGE': {
+            text: "Eres viejo. Tus huesos crujen la melodía de tus arrepentimientos. La civilización actual se desmorona, una nueva emerge de sus cenizas. ¿Cómo enfrentas el final?",
+             onLoad: () => {
+                const endCivs = ['LA MENTE-COLMENA DIGITAL', 'LA ANARQUÍA BOTÁNICA', 'EL SILENCIO CÓSMICO'];
+                player.endCivilization = endCivs[Math.floor(Math.random() * endCivs.length)];
+                addLog(`El viejo orden cae. Ahora reina ${player.endCivilization}.`);
+            },
+            options: [
+                { t: "Compartir tu sabiduría con la nueva generación.", eff: () => { player.kar += 20; }, next: 'DEATH' },
+                { t: "Convertirte en un viejo cínico que se queja de todo.", eff: () => { player.kar -= 20; }, next: 'DEATH' },
+                { t: "Intentar un último y loco acto de rebeldía/gloria.", eff: () => { const glorious = Math.random() > 0.7; if(glorious) addLog("Mueres en una explosión de gloria inútil pero espectacular."); else addLog("Mueres resbalando en un charco. Patético."); player.hp = 0; }, next: 'DEATH' }
+            ]
+        },
+        'DEATH': {
+            text: "El final. La luz se desvanece. Tus últimas memorias son un eco en el vacío.",
+            onLoad: () => { player.hp = 0; }
+        }
+    };
+
+    function startGame() {
+        player.age = 0; player.hp = 100; player.int = 10; player.kar = 0; player.race = ''; player.flags = new Set();
+        updateUI();
+        nextEvent('START');
+    }
+
+    function nextEvent(eventId) {
+        if (player.hp <= 0 && eventId !== 'DEATH') {
+            const endMsg = `Moriste a los ${player.age} años. Tu legado es un puñado de anécdotas mediocres que nadie recordará.`;
+            return endGame(endMsg);
+        }
+
+        const event = events[eventId];
+        if (!event) {
+            return endGame("Te has perdido en el guion de la vida y ahora no existes. Felicidades.");
+        }
+
+        // Ejecutar función si existe al cargar el evento
+        if (event.onLoad) event.onLoad();
+
+        player.age += Math.floor(Math.random() * 10) + 1;
+        updateUI();
+
+        const sarcasm = sarcasticComments[Math.floor(Math.random() * sarcasticComments.length)];
+        document.getElementById('sarcasm-label').innerText = sarcasm;
+
+        // Si el texto es una función, la ejecuta para obtener texto dinámico
+        const storyText = typeof event.text === 'function' ? event.text() : event.text;
+        document.getElementById('story').innerText = storyText;
+
+        const box = document.getElementById('choices');
+        box.innerHTML = '';
+
+        if (!event.options || event.options.length === 0) {
+            const endMsg = `A los ${player.age} años, te quedaste sin opciones. El universo te ignora hasta que dejas de existir.`;
+            return endGame(endMsg);
+        }
+
+        event.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerText = opt.t;
+            btn.onclick = () => {
+                if (opt.eff) opt.eff();
+                addLog(`Decisión: ${opt.t}`);
+                nextEvent(opt.next);
+            };
+            box.appendChild(btn);
+        });
+    }
+
+    function updateUI() {
+        document.getElementById('stat-race').innerText = player.race || '?';
+        document.getElementById('stat-hp').innerText = player.hp;
+        document.getElementById('stat-int').innerText = player.int;
+        document.getElementById('stat-kar').innerText = player.kar;
+        document.getElementById('stat-age').innerText = player.age;
+    }
+
+    function addLog(msg) {
+        const log = document.getElementById('log');
+        log.innerHTML = `<div>> ${msg}</div>` + log.innerHTML;
+        log.scrollTop = 0;
+    }
+
+    function endGame(finalMessage) {
+        document.getElementById('narrative-box').innerHTML = `<div class="death-screen">FIN DE TU MISERIA<br><span style="font-size:1rem">${finalMessage}</span></div>`;
+        document.getElementById('choices').innerHTML = `<button class="choice-btn" onclick="location.reload()">Intentar no fracasar de nuevo</button>`;
+    }
+
+    startGame();
+</script>
+
+</body>
+</html>
