@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel RPG</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #game-container {
+            width: 800px;
+            height: 600px;
+            border: 2px solid #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #game-screen {
+            flex: 3;
+            background-color: #000000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #player, #monster {
+            width: 50px;
+            height: 50px;
+            position: absolute;
+        }
+
+        #player {
+            background-color: #00ff00;
+            left: 150px;
+            bottom: 50px;
+        }
+
+        #monster {
+            background-color: #ff0000;
+            right: 150px;
+            bottom: 50px;
+        }
+
+        #ui-container {
+            flex: 1;
+            background-color: #333333;
+            padding: 10px;
+            display: grid;
+            grid-template-areas:
+                "player-stats monster-stats"
+                "message-log actions";
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 10px;
+        }
+
+        #player-stats {
+            grid-area: player-stats;
+        }
+
+        #monster-stats {
+            grid-area: monster-stats;
+        }
+
+        #message-log {
+            grid-area: message-log;
+            border: 1px solid #ffffff;
+            padding: 5px;
+            overflow-y: auto;
+        }
+
+        #actions {
+            grid-area: actions;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        button {
+            background-color: #555555;
+            color: #ffffff;
+            border: 1px solid #ffffff;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #777777;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-screen">
+            <div id="player"></div>
+            <div id="monster"></div>
+        </div>
+        <div id="ui-container">
+            <div id="player-stats">
+                <h2>Player</h2>
+                <p>HP: <span id="player-hp">100</span></p>
+                <p>Dungeon Level: <span id="dungeon-level">1</span></p>
+            </div>
+            <div id="monster-stats">
+                <h2>Monster</h2>
+                <p>HP: <span id="monster-hp">50</span></p>
+            </div>
+            <div id="message-log">
+                <p>A wild monster appears!</p>
+            </div>
+            <div id="actions">
+                <button id="attack-button">Attack</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let dungeonLevel = 1;
+
+        const player = {
+            hp: 100,
+            attack: 10,
+            defense: 5
+        };
+
+        const monster = {
+            hp: 50,
+            attack: 8,
+            defense: 3
+        };
+
+        const playerHpElement = document.getElementById('player-hp');
+        const monsterHpElement = document.getElementById('monster-hp');
+        const dungeonLevelElement = document.getElementById('dungeon-level');
+        const messageLogElement = document.getElementById('message-log');
+        const attackButton = document.getElementById('attack-button');
+
+        function updateUI() {
+            playerHpElement.textContent = player.hp;
+            monsterHpElement.textContent = monster.hp;
+            dungeonLevelElement.textContent = dungeonLevel;
+        }
+
+        function addMessage(message) {
+            const p = document.createElement('p');
+            p.textContent = message;
+            messageLogElement.appendChild(p);
+            messageLogElement.scrollTop = messageLogElement.scrollHeight;
+        }
+
+        function playerAttack() {
+            if (player.hp <= 0 || monster.hp <= 0) {
+                return;
+            }
+            const damage = Math.max(0, player.attack - monster.defense);
+            monster.hp = Math.max(0, monster.hp - damage);
+            addMessage(`Player attacks! Monster takes ${damage} damage.`);
+            updateUI();
+
+            if (monster.hp <= 0) {
+                addMessage('Monster defeated!');
+                attackButton.disabled = true;
+                setTimeout(nextLevel, 2000);
+                return;
+            }
+
+            attackButton.disabled = true;
+            setTimeout(() => {
+                monsterAttack();
+                if (player.hp > 0) {
+                    attackButton.disabled = false;
+                }
+            }, 1000);
+        }
+
+        function nextLevel() {
+            dungeonLevel++;
+            monster.hp = 50 + (dungeonLevel * 10);
+            monster.attack = 8 + (dungeonLevel * 2);
+            monster.defense = 3 + dungeonLevel;
+            addMessage(`A new, stronger monster appears for level ${dungeonLevel}!`);
+            updateUI();
+            attackButton.disabled = false;
+        }
+
+        function monsterAttack() {
+            const damage = Math.max(0, monster.attack - player.defense);
+            player.hp = Math.max(0, player.hp - damage);
+            addMessage(`Monster attacks! Player takes ${damage} damage.`);
+            updateUI();
+
+            if (player.hp <= 0) {
+                addMessage('Player defeated! Game Over.');
+                attackButton.disabled = true;
+            }
+        }
+
+        attackButton.addEventListener('click', playerAttack);
+
+        updateUI();
+    </script>
+</body>
+</html>
