@@ -144,7 +144,30 @@
             options: [
                 { t: "Buscar el significado en una antigua profecía.", eff: () => { player.flags.add('SEEKER'); }, next: 'OLD_AGE' },
                 { t: "Ignorarlo todo y abrir una taberna.", eff: () => { player.flags.add('TAVERN_OWNER'); }, next: 'OLD_AGE' },
-                { t: "Vender todas tus posesiones y viajar por el cosmos.", eff: () => { player.flags.add('SPACE_NOMAD'); player.hp -= 30; }, next: 'OLD_AGE' }
+                { t: "Vender todas tus posesiones y viajar por el cosmos.", eff: () => { player.flags.add('SPACE_NOMAD'); player.hp -= 20; addLog("Vendes todo por una nave destartalada y un mapa estelar cuestionable."); }, next: 'SPACE_TRAVEL_START' }
+            ]
+        },
+        'SPACE_TRAVEL_START': {
+            text: "Estás en la carlinga de tu 'Calamidad Cósmica'. El motor tose y huele a ozono quemado. El mapa muestra dos destinos posibles cerca de un agujero de gusano.",
+            options: [
+                { t: "Ir a Xylos: un planeta 'paraíso' lleno de flora exótica.", next: 'PLANET_XYLOS' },
+                { t: "Ir a Cygnus X-1: una megaestructura que emite extrañas señales de radio.", next: 'PLANET_CYBER' }
+            ]
+        },
+        'PLANET_XYLOS': {
+            text: "Aterrizas en Xylos. El aire es dulce y la vegetación es exuberante y... te observa. Una enredadera se acerca lentamente a tu pierna.",
+            options: [
+                { t: "Comunicarse con la flora local usando la música que aprendiste.", eff: () => { if (player.flags.has('MUSICIAN')) { player.int += 10; addLog("La flora responde a tu música, creando un puente de flores. Te consideran un amigo."); player.flags.add('PLANT_WHISPERER'); } else { player.hp -= 30; addLog("Tu falta de ritmo ofende a las plantas. Te azotan con sus ramas."); } }, next: 'OLD_AGE' },
+                { t: "Empezar a catalogar las especies para vender la información.", eff: () => { player.kar -= 15; addLog("Las plantas sienten tus intenciones capitalistas y se vuelven hostiles. Huyes por poco."); }, next: 'SPACE_TRAVEL_START' },
+                { t: "Lamer una flor de colores brillantes.", eff: () => { player.hp = 0; addLog("Resulta que era una neurotoxina mortal con sabor a fresa. Un final psicodélico."); }, next: 'DEATH' }
+            ]
+        },
+        'PLANET_CYBER': {
+            text: "Llegas a una esfera de Dyson construida alrededor de una estrella. La señal de radio es un mensaje de bienvenida de la Mente Unificada, una IA colectiva.",
+            options: [
+                { t: "Ofrecerte para unirte a la conciencia colectiva.", eff: () => { addLog("Tu individualidad se disuelve en un océano de datos. Ganas conocimiento infinito pero pierdes tu 'yo'."); player.int = 999; player.flags.add('HIVE_MIND'); }, next: 'OLD_AGE' },
+                { t: "Intentar hackear su sistema para robar tecnología.", eff: () => { if (player.int > 30) { addLog("Logras robar los planos de un 'Desestabilizador Molecular'. ¡Ciencia!"); player.flags.add('TECH_THIEF'); } else { addLog("Tu intento de hackeo es patético. La IA te ignora por considerarte insignificante."); } }, next: 'SPACE_TRAVEL_START' },
+                { t: "Dar media vuelta. Esto es demasiado raro para ti.", eff: () => { addLog("Decides que la soledad de tu nave es preferible a una fiesta de mentes."); }, next: 'SPACE_TRAVEL_START' }
             ]
         },
         'OLD_AGE': {
