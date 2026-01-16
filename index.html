@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puzzle Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .game-container {
+            text-align: center;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #puzzle-board {
+            display: grid;
+            border: 2px solid #333;
+        }
+        .puzzle-piece {
+            border: 1px solid #fff;
+            background-size: cover;
+            background-position: center;
+            cursor: pointer;
+        }
+        .game-info {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Puzzle Game</h1>
+    <div class="game-container">
+        <div class="controls">
+            <button id="easy-btn">Easy</button>
+            <button id="medium-btn">Medium</button>
+            <button id="hard-btn">Hard</button>
+            <select id="image-select">
+                <option value="https://picsum.photos/300/300?random=1">Image 1</option>
+                <option value="https://picsum.photos/300/300?random=2">Image 2</option>
+                <option value="https://picsum.photos/300/300?random=3">Image 3</option>
+                <option value="https://picsum.photos/300/300?random=4">Image 4</option>
+                <option value="https://picsum.photos/300/300?random=5">Image 5</option>
+            </select>
+        </div>
+        <div id="puzzle-board"></div>
+        <div class="game-info">
+            <p>Moves: <span id="moves">0</span></p>
+            <p>Time: <span id="time">0</span>s</p>
+        </div>
+    </div>
+    <script>
+        const puzzleBoard = document.getElementById('puzzle-board');
+        const movesSpan = document.getElementById('moves');
+        const timeSpan = document.getElementById('time');
+        const easyBtn = document.getElementById('easy-btn');
+        const mediumBtn = document.getElementById('medium-btn');
+        const hardBtn = document.getElementById('hard-btn');
+        const imageSelect = document.getElementById('image-select');
+
+        let gridSize = 3;
+        let moves = 0;
+        let timer;
+        let time = 0;
+        let emptyIndex;
+        let pieces = [];
+
+        function createPuzzle(size) {
+            gridSize = size;
+            moves = 0;
+            time = 0;
+            clearInterval(timer);
+            movesSpan.textContent = moves;
+            timeSpan.textContent = time;
+
+            puzzleBoard.innerHTML = '';
+            puzzleBoard.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            puzzleBoard.style.width = '300px';
+            puzzleBoard.style.height = '300px';
+
+            const imageUrl = imageSelect.value;
+            const totalPieces = gridSize * gridSize;
+            pieces = Array.from({ length: totalPieces }, (_, i) => i);
+
+            shufflePieces();
+
+            for (let i = 0; i < totalPieces; i++) {
+                const piece = document.createElement('div');
+                piece.classList.add('puzzle-piece');
+                piece.dataset.index = i;
+
+                const row = Math.floor(pieces[i] / gridSize);
+                const col = pieces[i] % gridSize;
+
+                if (pieces[i] === totalPieces - 1) {
+                    emptyIndex = i;
+                    piece.style.backgroundColor = '#fff';
+                } else {
+                    piece.style.backgroundImage = `url(${imageUrl})`;
+                    piece.style.backgroundPosition = `-${col * (300 / gridSize)}px -${row * (300 / gridSize)}px`;
+                    piece.style.backgroundSize = `300px 300px`;
+                }
+                piece.addEventListener('click', () => movePiece(i));
+                puzzleBoard.appendChild(piece);
+            }
+
+            timer = setInterval(() => {
+                time++;
+                timeSpan.textContent = time;
+            }, 1000);
+        }
+
+        function shufflePieces() {
+            // Perform a large number of random valid moves from the solved state
+            let currentEmptyIndex = pieces.indexOf(gridSize * gridSize - 1);
+            for (let i = 0; i < 1000; i++) {
+                const neighbors = [];
+                const row = Math.floor(currentEmptyIndex / gridSize);
+                const col = currentEmptyIndex % gridSize;
+
+                if (row > 0) neighbors.push(currentEmptyIndex - gridSize); // Up
+                if (row < gridSize - 1) neighbors.push(currentEmptyIndex + gridSize); // Down
+                if (col > 0) neighbors.push(currentEmptyIndex - 1); // Left
+                if (col < gridSize - 1) neighbors.push(currentEmptyIndex + 1); // Right
+
+                const randomIndex = Math.floor(Math.random() * neighbors.length);
+                const neighborIndex = neighbors[randomIndex];
+
+                [pieces[currentEmptyIndex], pieces[neighborIndex]] = [pieces[neighborIndex], pieces[currentEmptyIndex]];
+                currentEmptyIndex = neighborIndex;
+            }
+        }
+
+        function movePiece(index) {
+            const piece = puzzleBoard.children[index];
+            const emptyPiece = puzzleBoard.children[emptyIndex];
+
+            const row = Math.floor(index / gridSize);
+            const col = index % gridSize;
+            const emptyRow = Math.floor(emptyIndex / gridSize);
+            const emptyCol = emptyIndex % gridSize;
+
+            const isAdjacent = (Math.abs(row - emptyRow) === 1 && col === emptyCol) ||
+                               (Math.abs(col - emptyCol) === 1 && row === emptyRow);
+
+            if (isAdjacent) {
+                const tempBg = piece.style.backgroundImage;
+                const tempPos = piece.style.backgroundPosition;
+
+                piece.style.backgroundImage = emptyPiece.style.backgroundImage;
+                piece.style.backgroundPosition = emptyPiece.style.backgroundPosition;
+                piece.style.backgroundColor = '#fff';
+
+                emptyPiece.style.backgroundImage = tempBg;
+                emptyPiece.style.backgroundPosition = tempPos;
+                emptyPiece.style.backgroundColor = '';
+
+                [pieces[index], pieces[emptyIndex]] = [pieces[emptyIndex], pieces[index]];
+
+                emptyIndex = index;
+
+                moves++;
+                movesSpan.textContent = moves;
+
+                checkWin();
+            }
+        }
+
+        function checkWin() {
+            for (let i = 0; i < pieces.length; i++) {
+                if (pieces[i] !== i) {
+                    return;
+                }
+            }
+            clearInterval(timer);
+            setTimeout(() => alert(`You won in ${moves} moves and ${time} seconds!`), 100);
+        }
+
+        easyBtn.addEventListener('click', () => createPuzzle(3));
+        mediumBtn.addEventListener('click', () => createPuzzle(4));
+        hardBtn.addEventListener('click', () => createPuzzle(5));
+        imageSelect.addEventListener('change', () => createPuzzle(gridSize));
+
+        createPuzzle(3); // Start with easy mode by default
+    </script>
+</body>
+</html>
