@@ -45,6 +45,7 @@
     </div>
 
     <div id="narrative-box">
+        <pre id="ascii-display"></pre>
         <span id="sarcasm-label" class="sarcastic-prefix"></span>
         <div id="story" class="story-text">Cargando tu miserable existencia...</div>
     </div>
@@ -55,217 +56,212 @@
 </div>
 
 <script>
-    const player = { age: 0, hp: 100, int: 10, kar: 0, race: '', flags: new Set(), majorDecisions: [] };
+    const player = { age: 0, hp: 100, int: 10, kar: 0, race: '', stage: 'childhood', flags: new Set(), majorDecisions: [] };
 
     const sarcasticComments = [
         "Una elección audaz. Veamos cómo arruinas esto.", "El destino te observa... y se ríe.",
-        "Ah, la dulce sinfonía de las malas decisiones.", "Podrías haber elegido sabiamente. Pero no lo hiciste.",
-        "Tu capacidad para elegir el peor camino es casi un superpoder.", "El cosmos se encoge de hombros ante tu existencia."
+        "Ah, la dulce sinfonía de las malas decisiones.", "Podrías haber elegido sabiamente. Pero no lo hiciste."
     ];
 
-    const events = {
-        'ELEMENT_SELECTION': {
-            text: "Antes de la forma, está la esencia. Elige tu afinidad elemental primordial.",
-            options: [
-                { t: "Fuego: Pasión y poder. Volátil.", eff: () => { player.hp += 10; player.kar -= 5; addLog("Elegiste el Fuego.", true); }, next: 'RACE_SELECTION' },
-                { t: "Agua: Adaptabilidad y conocimiento. Misterioso.", eff: () => { player.int += 10; player.hp -= 5; addLog("Elegiste el Agua.", true); }, next: 'RACE_SELECTION' },
-                { t: "Tierra: Resistencia y estabilidad. Obstinado.", eff: () => { player.hp += 20; player.int -= 5; addLog("Elegiste la Tierra.", true); }, next: 'RACE_SELECTION' },
-                { t: "Viento: Libertad e intelecto. Caótico.", eff: () => { player.int += 5; player.kar += 5; addLog("Elegiste el Viento.", true); }, next: 'RACE_SELECTION' },
-                { t: "Éter: El nexo de los elementos. Equilibrado pero impredecible.", eff: () => { player.flags.add('AETHER_BORN'); addLog("Elegiste el Éter.", true);}, next: 'RACE_SELECTION' }
-            ]
-        },
-        'RACE_SELECTION': {
-            text: "Tu esencia elemental anhela una forma. ¿Qué decides ser?",
-            options: [
-                { t: "Humano: Versátil y ambicioso.", eff: () => { player.race = 'Humano'; player.int += 2; addLog("Decidiste ser Humano.", true); }, next: 'BIRTH' },
-                { t: "Elfo Silvano: Conectado a la naturaleza, sabio y frágil.", eff: () => { player.race = 'Elfo'; player.int += 5; player.hp -= 10; player.kar += 5; addLog("Decidiste ser Elfo Silvano.", true); }, next: 'BIRTH' },
-                { t: "Orco de las Cavernas: Fuerte, directo y a menudo incomprendido.", eff: () => { player.race = 'Orco'; player.hp += 15; player.int -= 5; addLog("Decidiste ser Orco de las Cavernas.", true);}, next: 'BIRTH' },
-                { t: "IA: Pura lógica en un mundo ilógico.", eff: () => { player.race = 'IA'; player.int += 10; player.hp -= 10; addLog("Decidiste ser una IA.", true);}, next: 'BIRTH' }
-            ]
-        },
-        'BIRTH': {
-            text: "Naces. Es ruidoso, brillante y decepcionante. Lo primero que ves es la cara de tu 'padre', que parece calcular cuánto costará mantenerte.",
-            options: [
-                { t: "Llorar exigiendo atención.", eff: () => { player.kar -= 2; addLog("Tu primer acto fue ser una molestia."); }, next: 'CHILD_1' },
-                { t: "Observar en silencio, juzgando.", eff: () => { player.int += 2; addLog("Absorbiste la decepción del ambiente y te hiciste más listo."); }, next: 'CHILD_1' },
-                { t: "Morderle el dedo.", eff: () => { player.hp -= 5; addLog("Te golpeó. Aprendiste sobre la causa y el efecto."); }, next: 'CHILD_1' }
-            ]
-        },
-        'CHILD_1': {
-            text: "La infancia es un borrón. Un día, un anciano misterioso llega a tu aldea. Ofrece enseñarte algo.",
-            options: [
-                { t: "Aprender a tocar el laúd.", eff: () => { player.flags.add('MUSICIAN'); addLog("Aprendiste a tocar el laúd. Ahora puedes molestar a la gente con música.", true); }, next: 'TEEN_1' },
-                { t: "Aprender a leer mapas estelares.", eff: () => { player.int += 5; player.flags.add('NAVIGATOR'); addLog("Aprendiste a navegar las estrellas.", true); }, next: 'TEEN_1' },
-                { t: "Aceptar un 'caramelo mágico' que te ofrece.", eff: () => { addLog("El caramelo sabía a ceniza y te debilitó. Una lección sobre no confiar en extraños.", true); player.hp -= 15; player.kar -= 5; }, next: 'TEEN_1' },
-                { t: "Sentarse a su lado e intentar respirar como él.", check: () => player.race === 'Humano', eff: () => { addLog("Imitaste su respiración y sentiste un calor extraño en tu interior.", true); player.flags.add('KI_AWAKENING'); }, next: 'CHILD_HUMAN_KI_1' }
-            ]
-        },
-        'CHILD_HUMAN_KI_1': {
-            text: "El anciano sonríe. 'El universo no está solo afuera, también está adentro', susurra. 'Controla tu aliento, controla tu energía. Controla tu ki'. Te ofrece guiarte.",
-            options: [
-                { t: "Dedicar tu juventud a su entrenamiento.", eff: () => { player.int += 5; player.hp += 10; player.flags.add('KI_TRAINED'); addLog("Pasaste años entrenando tu ki.", true); }, next: 'KI_TRAINING_MONTAGE' },
-                { t: "Rechazarlo. Suena a demasiado trabajo.", eff: () => { addLog("Decidiste que la introspección no era para ti."); }, next: 'TEEN_1' }
-            ]
-        },
-        'KI_TRAINING_MONTAGE': {
-            text: "Los años pasan. Aprendes a sentir el flujo de energía en tu cuerpo. Durante una sesión de meditación, intentas manifestar tu ki. ¿Cómo lo enfocas?",
-            options: [
-                { t: "Como un torrente furioso.", eff: () => { const success = Math.random() > 0.5; if (success) { player.hp += 20; addLog("¡Canalizas tu ki en una explosión de poder! Te sientes vigorizado.", true); } else { player.hp -= 10; addLog("Pierdes el control y tu propia energía te daña."); } }, next: 'KI_ENEMY_APPEARS' },
-                { t: "Como un escudo protector.", eff: () => { const success = Math.random() > 0.5; if (success) { player.int += 10; addLog("Creas una barrera de ki casi invisible. Tu control es impresionante.", true); } else { player.kar -= 5; addLog("El escudo falla y explota, asustando a las ovejas del pueblo."); } }, next: 'KI_ENEMY_APPEARS' }
-            ]
-        },
-        'KI_ENEMY_APPEARS': {
-            text: "Tu despliegue de poder atrae atención no deseada. Una figura sombría, un 'cazador de ki' que se alimenta de la energía de otros, aparece en el horizonte.",
-            options: [
-                { t: "Enfrentarlo directamente, usando tu nuevo poder.", eff: () => { if (player.hp > 50) { addLog("Luchas valientemente y lo derrotas, absorbiendo su esencia.", true); player.int += 10; player.hp += 10; } else { player.hp = 0; addLog("Tu poder era insuficiente. El cazador te consume."); } }, next: 'DEATH' },
-                { t: "Ocultar tu presencia de ki y huir.", eff: () => { addLog("Logras suprimir tu energía y escapar. Vives para luchar otro día.", true); }, next: 'ADULT_CIV_START' }
-            ]
-        },
-        'TEEN_1': {
-            text: "La adolescencia te golpea. Es horrible. Un día, mientras deambulas por el bosque, encuentras un portal brillante y pulsante.",
-            options: [
-                { t: "Atravesarlo sin pensar.", next: 'PORTAL_REALM' },
-                { t: "Lanzar una piedra primero.", eff: () => { addLog("La piedra desaparece. El portal sigue ahí, zumbando."); }, next: 'TEEN_1_CHOICE' },
-                { t: "Ignorarlo y volver a casa.", eff: () => { addLog("Decides que la aniquilación puede esperar."); }, next: 'ADULT_CIV_START' }
-            ]
-        },
-        'TEEN_1_CHOICE': {
-            text: "La piedra no ha vuelto. El portal sigue siendo una invitación a lo desconocido. ¿Qué haces?",
-            options: [
-                { t: "Entrar. La vida es riesgo.", next: 'PORTAL_REALM' },
-                { t: "Huir. La vida es para vivirla, preferiblemente no en pedazos.", eff: () => { addLog("Decidiste que la aniquilación puede esperar."); }, next: 'ADULT_CIV_START' }
-            ]
-        },
-        'PORTAL_REALM': {
-            text: "Emerges en una ciudad hecha de cristal bajo un sol negro. Seres de energía pura flotan a tu alrededor.",
-            onLoad: () => { player.age += 50; addLog("El tiempo fluye de forma diferente aquí.", true); },
-            options: [
-                { t: "Intentar comunicarte.", eff: () => { player.int += 10; addLog("Aprendes el lenguaje cromático. Tu mente se expande.", true); }, next: 'ADULT_CIV_START' },
-                { t: "Buscar algo para robar.", eff: () => { player.kar -= 20; addLog("Te pillan y te exilian con una marca de deshonor cósmico.", true); player.flags.add('COSMIC_THIEF'); }, next: 'ADULT_CIV_START' }
-            ]
-        },
-        'ADULT_CIV_START': {
-            text: "Llegas a la edad adulta. El mundo está cambiando. Una nueva civilización está en auge.",
-            onLoad: () => {
-                const civs = ['IMPERIO TECNOCRÁTICO', 'REPÚBLICA FÚNGICA', 'HEGEMONÍA DE LOS GATOS'];
-                player.civilization = civs[Math.floor(Math.random() * civs.length)];
-                addLog(`El mundo ahora está dominado por la ${player.civilization}.`);
-            },
-            options: [
-                { t: "Adaptarse y prosperar.", next: 'CIV_JOB' },
-                { t: "Rebelarse contra el sistema.", next: 'CIV_REBEL' }
-            ]
-        },
-        'CIV_JOB': {
-             text: () => `La ${player.civilization} necesita trabajadores. Te ofrecen un puesto como ${player.civilization === 'IMPERIO TECNOCRÁTICO' ? 'Técnico de Bio-Implantes' : player.civilization === 'REPÚBLICA FÚNGICA' ? 'Recolector de Esporas Conscientes' : 'Acariciador de Élite Felino'}.`,
-            options: [
-                { t: "Aceptar el trabajo.", eff: () => { player.int += 5; addLog("Te convertiste en una pieza más del engranaje.", true); }, next: 'MID_LIFE_CRISIS' },
-                { t: "Rechazarlo y vivir en los márgenes.", eff: () => { player.hp -= 20; addLog("La vida de ermitaño fue dura y hambrienta.", true); }, next: 'MID_LIFE_CRISIS' }
-            ]
-        },
-        'CIV_REBEL': {
-             text: () => `Te unes a la resistencia contra la ${player.civilization}. Tu primera misión es sabotear un convoy.`,
-            options: [
-                { t: "Liderar el ataque.", eff: () => { const success = Math.random() > 0.5; if(success) { player.kar += 10; addLog("¡Victoria! Fuiste un héroe para los oprimidos.", true); } else { player.hp -= 50; addLog("Fracasaste estrepitosamente. Apenas escapaste con vida."); } }, next: 'MID_LIFE_CRISIS' },
-                { t: "Filtrar información.", eff: () => { const success = player.int > 20; if(success) { player.kar += 15; player.int += 5; addLog("Tu espionaje salvó vidas. Una leyenda silenciosa.", true); } else { player.kar -= 10; addLog("Te descubrieron y marcaron como traidor.", true); player.flags.add('TRAITOR'); } }, next: 'MID_LIFE_CRISIS' }
-            ]
-        },
-        'MID_LIFE_CRISIS': {
-            text: "La mediana edad. Contemplas tus elecciones. Un cometa de dos colas cruza el cielo.",
-            options: [
-                { t: "Buscar el significado en una antigua profecía.", eff: () => { player.flags.add('SEEKER'); addLog("Buscaste respuestas en las estrellas.", true);}, next: 'OLD_AGE' },
-                { t: "Ignorarlo todo y abrir una taberna.", eff: () => { player.flags.add('TAVERN_OWNER'); addLog("Te refugiaste en la simplicidad de una taberna.", true); }, next: 'OLD_AGE' },
-                { t: "Vender todo y viajar por el cosmos.", eff: () => { player.flags.add('SPACE_NOMAD'); player.hp -= 20; addLog("Compraste una nave destartalada para ver el universo.", true); }, next: 'SPACE_TRAVEL_START' }
-            ]
-        },
-        'SPACE_TRAVEL_START': {
-            text: "Estás en tu nave. El mapa muestra dos destinos posibles cerca de un agujero de gusano.",
-            options: [
-                { t: "Ir a Xylos: un planeta 'paraíso' lleno de flora exótica.", next: 'PLANET_XYLOS' },
-                { t: "Ir a Cygnus X-1: una megaestructura con extrañas señales.", next: 'PLANET_CYBER' }
-            ]
-        },
-        'PLANET_XYLOS': {
-            text: "Aterrizas en Xylos. El aire es dulce y la vegetación es exuberante y... te observa.",
-            options: [
-                { t: "Comunicarse con la flora local usando la música.", eff: () => { if (player.flags.has('MUSICIAN')) { player.int += 10; addLog("La flora respondió a tu música. Te consideraron un amigo.", true); player.flags.add('PLANT_WHISPERER'); } else { player.hp -= 30; addLog("Tu falta de ritmo ofendió a las plantas."); } }, next: 'OLD_AGE' },
-                { t: "Catalogar las especies para vender la información.", eff: () => { player.kar -= 15; addLog("Las plantas sintieron tus intenciones capitalistas y te expulsaron.", true); }, next: 'SPACE_TRAVEL_START' },
-                { t: "Lamer una flor de colores brillantes.", eff: () => { player.hp = 0; addLog("Resultó que era una neurotoxina mortal con sabor a fresa.", true); }, next: 'DEATH' }
-            ]
-        },
-        'PLANET_CYBER': {
-            text: "Llegas a una esfera de Dyson. La señal es una bienvenida de la Mente Unificada, una IA colectiva.",
-            options: [
-                { t: "Unirte a la conciencia colectiva.", eff: () => { addLog("Te disolviste en un océano de datos. Ganaste conocimiento, perdiste tu 'yo'.", true); player.int = 999; player.flags.add('HIVE_MIND'); }, next: 'OLD_AGE' },
-                { t: "Intentar hackear su sistema.", eff: () => { if (player.int > 30) { addLog("Lograste robar los planos de un 'Desestabilizador Molecular'.", true); player.flags.add('TECH_THIEF'); } else { addLog("Tu intento de hackeo fue patético."); } }, next: 'SPACE_TRAVEL_START' },
-                { t: "Dar media vuelta.", eff: () => { addLog("Decidiste que la soledad de tu nave era preferible."); }, next: 'SPACE_TRAVEL_START' }
-            ]
-        },
-        'OLD_AGE': {
-            text: "Eres viejo. Tus huesos crujen. La civilización se desmorona, una nueva emerge. ¿Cómo enfrentas el final?",
-             onLoad: () => {
-                const endCivs = ['LA MENTE-COLMENA DIGITAL', 'LA ANARQUÍA BOTÁNICA', 'EL SILENCIO CÓSMICO'];
-                player.endCivilization = endCivs[Math.floor(Math.random() * endCivs.length)];
-                addLog(`El viejo orden cayó. Ahora reina ${player.endCivilization}.`);
-            },
-            options: [
-                { t: "Compartir tu sabiduría con la nueva generación.", eff: () => { player.kar += 20; addLog("Moriste como un sabio venerado.", true); }, next: 'DEATH' },
-                { t: "Convertirte en un viejo cínico.", eff: () => { player.kar -= 20; addLog("Moriste como un viejo amargado.", true); }, next: 'DEATH' },
-                { t: "Intentar un último acto de gloria.", eff: () => { const glorious = Math.random() > 0.7; if(glorious) addLog("Moriste en una explosión de gloria inútil pero espectacular.", true); else addLog("Moriste resbalando en un charco. Patético.", true); player.hp = 0; }, next: 'DEATH' }
-            ]
-        },
-        'DEATH': {
-            text: "El final. La luz se desvanece. Tus últimas memorias son un eco en el vacío.",
-            onLoad: () => { player.hp = 0; }
-        }
+    const art = {
+        book: `
+          .--.                   .---.
+      .---|__|           .-.     |~~~|
+   .--|===|--|____.--.  |~|     |~~~|--.
+   |  |===|  |    |  |--|~|     |~~~|  |
+   |  |   |  |    |  |  |~|     |   |  |
+   |  |   |  |    |  |--|~|-----|   |--|
+   |  |   |  |    |  |  |~|     |   |  |
+   '--'   '--'    '--'--'"'-----'"--'--'
+`,
+        sword: `
+            /| ________________
+O|===|* >________________>
+            \\|
+`,
+        portal: `
+          ,ad8888ba,
+         d8"'    '"8b
+        d8'        '8b
+        88          88
+        88          88
+        Y8,        ,8P
+         Y8a.    .a8P
+          'Y88888P'
+`,
+        rocket: `
+            /\\
+           //\\\\
+          //  \\\\
+         |/----\\|
+         |'    '|
+         |  ||  |
+         |  ||  |
+         |  ||  |
+        /|______|_\\
+       /    /\\    \\
+      |    |  |    |
+`
     };
 
+    let eventPools = {};
+
+    function setupEvents() {
+        return {
+            fixed: { // Eventos que ocurren en orden
+                'ELEMENT_SELECTION': {
+                    text: "Antes de la forma, está la esencia. Elige tu afinidad elemental primordial.",
+                    art: art.portal,
+                    options: [
+                        { t: "Fuego: Pasión y poder.", eff: () => { player.hp += 10; player.kar -= 5; addLog("Elegiste el Fuego.", true); }, next: 'RACE_SELECTION' },
+                        { t: "Agua: Adaptabilidad y conocimiento.", eff: () => { player.int += 10; player.hp -= 5; addLog("Elegiste el Agua.", true); }, next: 'RACE_SELECTION' }
+                    ]
+                },
+                'RACE_SELECTION': {
+                    text: "Tu esencia anhela una forma. ¿Qué decides ser?",
+                    art: art.book,
+                    options: [
+                        { t: "Humano: Versátil y ambicioso.", eff: () => { player.race = 'Humano'; addLog("Decidiste ser Humano.", true); } },
+                        { t: "Elfo Silvano: Sabio y frágil.", eff: () => { player.race = 'Elfo'; player.int += 5; player.hp -= 10; addLog("Decidiste ser Elfo.", true); } }
+                    ]
+                },
+                'DEATH': {
+                    text: "El final. La luz se desvanece. Tus últimas memorias son un eco en el vacío.",
+                    art: '',
+                    onLoad: () => { player.hp = 0; }
+                }
+            },
+            childhood: [ // Piscina de eventos aleatorios
+                {
+                    text: "Un matón te roba el almuerzo. ¿Qué haces?",
+                    art: art.sword,
+                    options: [
+                        { t: "Llorar.", eff: () => { player.kar -= 5; addLog("El matón se ríe. Pasaste hambre."); }},
+                        { t: "Intentar razonar con él.", eff: () => { if(player.int > 12) { addLog("Sorprendentemente, funcionó. Hablasteis de vuestros sentimientos."); player.int++; } else { addLog("Se aburrió y te dio un golpe."); player.hp -= 10; } }}
+                    ]
+                },
+                {
+                    text: "Encuentras un libro antiguo en un idioma que no entiendes.",
+                    art: art.book,
+                    options: [
+                        { t: "Usarlo para encender una hoguera.", eff: () => { addLog("Fue una hoguera muy instructiva. Lástima que el libro fuera mágico."); player.kar -= 10; }},
+                        { t: "Pasar años intentando descifrarlo.", eff: () => { player.int += 10; player.flags.add('SCHOLAR'); addLog("Descifraste el 'Tratado de la Nulidad Cósmica'. Ahora eres más listo y más triste."); }}
+                    ]
+                }
+            ],
+            adolescence: [
+                {
+                    text: "Es el festival del pueblo y te atreves a participar en el concurso de comer pasteles.",
+                    art: art.portal, // Reutilizando arte
+                    options: [
+                        { t: "Comer con delicadeza.", eff: () => { addLog("No ganaste, pero al menos no vomitaste delante de todos."); }},
+                        { t: "Devorar sin piedad.", eff: () => { player.hp += 5; addLog("Ganaste un peluche feo y una indigestión gloriosa."); }}
+                    ]
+                }
+            ],
+            adulthood: [
+                 {
+                    text: "El recaudador de impuestos visita tu humilde morada.",
+                    art: art.sword,
+                    options: [
+                        { t: "Pagarle con una sonrisa falsa.", eff: () => { player.kar += 5; addLog("El sistema te lo agradece. Tu bolsillo no."); }},
+                        { t: "Explicarle que eres un 'ciudadano soberano' y no reconoces su autoridad.", eff: () => { player.hp -= 20; addLog("Te arrestaron. Resulta que sí reconocen su autoridad."); }}
+                    ]
+                }
+            ],
+             space: [
+                {
+                    text: "Encuentras una nave abandonada. Parece funcional.",
+                    art: art.rocket,
+                    options: [
+                        { t: "¡Al espacio!", eff: () => { player.stage = 'space'; addLog("¡Despegas hacia lo desconocido!", true); }},
+                        { t: "Venderla por piezas.", eff: () => { player.int += 5; addLog("El dinero te da una efímera sensación de seguridad."); }}
+                    ]
+                },
+                {
+                    text: "Una sonda alienígena se estrella cerca. ¿Investigas?",
+                    art: art.rocket,
+                    options: [
+                        { t: "Acercarte con cautela.", eff: () => { player.hp -= 15; addLog("Emitió una ráfaga de radiación. Ahora brillas en la oscuridad."); }},
+                        { t: "Llamar a la guardia del pueblo.", eff: () => { addLog("Se llevaron la gloria y tú te quedaste con el miedo."); }}
+                    ]
+                }
+            ]
+        };
+    }
+
+
     function startGame() {
-        player.age = 0; player.hp = 100; player.int = 10; player.kar = 0; player.race = ''; player.flags = new Set(); player.majorDecisions = [];
+        player.age = 0; player.hp = 100; player.int = 10; player.kar = 0; player.race = ''; player.stage = 'childhood'; player.flags = new Set(); player.majorDecisions = [];
+        eventPools = setupEvents();
         updateUI();
         nextEvent('ELEMENT_SELECTION');
     }
 
     function nextEvent(eventId) {
-        if (player.hp <= 0 && eventId !== 'DEATH') {
-            const endMsg = `Moriste a los ${player.age} años. Tu legado es un puñado de anécdotas mediocres.`;
-            return endGame(endMsg);
+        if (player.hp <= 0) {
+            return endGame(`Moriste a los ${player.age} años.`);
         }
 
-        const event = events[eventId];
+        let event;
+        if (eventId) { // Es un evento fijo
+            event = eventPools.fixed[eventId];
+        } else { // Es un evento aleatorio de una piscina
+
+            // Transición de etapas de la vida
+            if(player.age > 18 && player.stage === 'childhood') player.stage = 'adolescence';
+            if(player.age > 30 && player.stage === 'adolescence') player.stage = 'adulthood';
+            if(player.age > 50 && player.stage === 'adulthood') player.stage = 'space'; // Oportunidad de ir al espacio
+
+            let currentPool = eventPools[player.stage];
+            if (!currentPool || currentPool.length === 0) {
+                // Si la piscina está vacía, pasa a la siguiente o termina
+                const stages = ['childhood', 'adolescence', 'adulthood', 'space'];
+                let currentStageIndex = stages.indexOf(player.stage);
+                if(currentStageIndex < stages.length - 1) {
+                    player.stage = stages[currentStageIndex + 1];
+                    currentPool = eventPools[player.stage];
+                }
+            }
+
+            if (!currentPool || currentPool.length === 0) {
+                 return endGame(`Llegaste a los ${player.age} años en un mundo que ya no tenía sorpresas para ti.`);
+            }
+
+            const eventIndex = Math.floor(Math.random() * currentPool.length);
+            event = currentPool[eventIndex];
+            currentPool.splice(eventIndex, 1); // Eliminar el evento para no repetirlo
+        }
+
         if (!event) {
-            return endGame("Te has perdido en el guion de la vida y ahora no existes. Felicidades.");
+            return endGame("Te has perdido en el guion de la vida y ahora no existes.");
         }
 
-        if (event.onLoad) event.onLoad();
-
-        player.age += Math.floor(Math.random() * 8) + 2;
+        player.age += Math.floor(Math.random() * 5) + 1;
         updateUI();
 
-        const sarcasm = sarcasticComments[Math.floor(Math.random() * sarcasticComments.length)];
-        document.getElementById('sarcasm-label').innerText = sarcasm;
-
-        const storyText = typeof event.text === 'function' ? event.text() : event.text;
-        document.getElementById('story').innerText = storyText;
+        document.getElementById('ascii-display').innerText = event.art || '';
+        document.getElementById('sarcasm-label').innerText = sarcasticComments[Math.floor(Math.random() * sarcasticComments.length)];
+        document.getElementById('story').innerText = event.text;
 
         const box = document.getElementById('choices');
         box.innerHTML = '';
 
         if (!event.options || event.options.length === 0) {
-            const endMsg = `A los ${player.age} años, te quedaste sin opciones. El universo te ignora.`;
-            return endGame(endMsg);
+            return setTimeout(() => nextEvent(), 2000); // Pausa y pasa al siguiente evento si no hay opciones
         }
 
         event.options.forEach(opt => {
-            if (opt.check && !opt.check()) {
-                return;
-            }
             const btn = document.createElement('button');
             btn.className = 'choice-btn';
             btn.innerText = opt.t;
             btn.onclick = () => {
                 if (opt.eff) opt.eff();
-                nextEvent(opt.next);
+                if (opt.next) {
+                    nextEvent(opt.next);
+                } else {
+                    nextEvent();
+                }
             };
             box.appendChild(btn);
         });
@@ -282,7 +278,6 @@
     function addLog(msg, isMajor = false) {
         const log = document.getElementById('log');
         log.innerHTML = `<div>> ${msg}</div>` + log.innerHTML;
-        log.scrollTop = 0;
         if (isMajor) {
             player.majorDecisions.push(msg);
         }
