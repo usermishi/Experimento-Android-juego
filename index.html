@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sarcastic Life Simulator: Infinite Saga</title>
+    <style>
+        :root { --neon-blue: #00f2ff; --death-red: #ff4444; --irony-gold: #fbbf24; }
+        body { background: #0a0a0c; color: #d1d5db; font-family: 'Courier New', Courier, monospace; display: flex; justify-content: center; padding: 20px; }
+        #game-container { width: 100%; max-width: 800px; border: 2px solid #2d3748; background: #111827; padding: 2rem; border-radius: 8px; position: relative; }
+
+        /* Stats */
+        .hud { display: flex; justify-content: space-between; margin-bottom: 2rem; border-bottom: 1px solid #2d3748; padding-bottom: 1rem; }
+        .stat-box { text-align: center; }
+        .stat-label { font-size: 0.7rem; color: #94a3b8; display: block; }
+        .stat-val { font-size: 1.2rem; font-weight: bold; color: var(--irony-gold); }
+
+        /* Narrative Area */
+        #narrative-box { min-height: 180px; margin-bottom: 2rem; }
+        .sarcastic-prefix { color: var(--death-red); font-weight: bold; font-style: italic; display: block; margin-bottom: 0.5rem; }
+        .story-text { font-size: 1.4rem; line-height: 1.4; color: #f9fafb; }
+
+        /* Choices */
+        .options-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .choice-btn {
+            background: #1f2937; border: 1px solid #374151; color: #e5e7eb; padding: 15px;
+            text-align: left; cursor: pointer; transition: 0.2s; position: relative; overflow: hidden;
+        }
+        .choice-btn:hover { background: #374151; border-color: var(--neon-blue); padding-left: 25px; }
+        .choice-btn::before { content: '>'; position: absolute; left: 10px; opacity: 0; }
+        .choice-btn:hover::before { opacity: 1; }
+
+        #log { font-size: 0.8rem; color: #4b5563; margin-top: 2rem; height: 100px; overflow-y: auto; border-top: 1px dashed #2d3748; padding-top: 10px; }
+        .death-screen { color: var(--death-red); text-align: center; font-size: 2rem; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="hud">
+        <div class="stat-box"><span class="stat-label">🧬 RAZA</span><span id="stat-race" class="stat-val">?</span></div>
+        <div class="stat-box"><span class="stat-label">❤️ VITALIDAD</span><span id="stat-hp" class="stat-val">100</span></div>
+        <div class="stat-box"><span class="stat-label">🧠 EGO/INT</span><span id="stat-int" class="stat-val">10</span></div>
+        <div class="stat-box"><span class="stat-label">⚖️ KARMA</span><span id="stat-kar" class="stat-val">0</span></div>
+        <div class="stat-box"><span class="stat-label">⌛ EDAD</span><span id="stat-age" class="stat-val">0</span></div>
+    </div>
+
+    <div id="narrative-box">
+        <pre id="ascii-display"></pre>
+        <span id="sarcasm-label" class="sarcastic-prefix"></span>
+        <div id="story" class="story-text">Cargando tu miserable existencia...</div>
+    </div>
+
+    <div id="choices" class="options-grid"></div>
+
+    <div id="log"></div>
+</div>
+
+<script>
+    const player = { age: 0, hp: 100, int: 10, kar: 0, race: '', stage: 'childhood', flags: new Set(), majorDecisions: [] };
+
+    const sarcasticComments = [
+        "Una elección audaz. Veamos cómo arruinas esto.", "El destino te observa... y se ríe.",
+        "Ah, la dulce sinfonía de las malas decisiones.", "Podrías haber elegido sabiamente. Pero no lo hiciste."
+    ];
+
+    const art = {
+        book: `
+          .--.                   .---.
+      .---|__|           .-.     |~~~|
+   .--|===|--|____.--.  |~|     |~~~|--.
+   |  |===|  |    |  |--|~|     |~~~|  |
+   |  |   |  |    |  |  |~|     |   |  |
+   '--'   '--'    '--'--'"'-----'"--'--'
+`,
+        sword: `
+            /| ________________
+O|===|* >________________>
+            \\|
+`,
+        portal: `
+          ,ad8888ba,
+         d8"'    '"8b
+        d8'        '8b
+        88          88
+        Y8,        ,8P
+         Y8a.    .a8P
+          'Y88888P'
+`,
+        rocket: `
+            /\\
+           //\\\\
+          //  \\\\
+         |/----\\|
+         |'    '|
+         |  ||  |
+        /|______|_\\
+`,
+        god: `
+      .o.
+     o   o
+    o     o
+   o       o
+  o         o
+ o           o
+o-------------o
+`,
+        puzzle: `
+    _______
+   /     _ \\
+  |'____/ \\ \\
+  |_______/ |
+   \\_______/
+`
+    };
+
+    let eventPools = {};
+
+    function setupEvents() {
+        return {
+            fixed: {
+                'ELEMENT_SELECTION': {
+                    text: "Elige tu afinidad elemental primordial.",
+                    art: art.portal,
+                    options: [
+                        { t: "Fuego", eff: () => { player.hp += 10; player.kar -= 5; addLog("Elegiste Fuego.", true); }, next: 'RACE_SELECTION' },
+                        { t: "Agua", eff: () => { player.int += 10; player.hp -= 5; addLog("Elegiste Agua.", true); }, next: 'RACE_SELECTION' },
+                        { t: "Luz", eff: () => { player.kar += 10; player.int += 5; addLog("Elegiste Luz.", true); }, next: 'RACE_SELECTION' },
+                        { t: "Sombra", eff: () => { player.int += 10; player.kar -= 5; addLog("Elegiste Sombra.", true); }, next: 'RACE_SELECTION' },
+                        { t: "Metal", eff: () => { player.hp += 20; player.int -= 5; addLog("Elegiste Metal.", true); }, next: 'RACE_SELECTION' }
+                    ]
+                },
+                'RACE_SELECTION': {
+                    text: "Tu esencia anhela una forma. ¿Qué decides ser?",
+                    art: art.book,
+                    options: [
+                        { t: "Humano (Terra)", eff: () => { player.race = 'Humano'; addLog("Eres un Humano.", true); } },
+                        { t: "Felinoide (Mundo Selva)", eff: () => { player.race = 'Felinoide'; player.int += 5; player.hp += 5; addLog("Eres un Felinoide.", true); } },
+                        { t: "Silicoide (Luna de Cristal)", eff: () => { player.race = 'Silicoide'; player.hp += 20; player.int -= 5; addLog("Eres un Silicoide.", true); } },
+                        { t: "Nephilim (Semidiós)", eff: () => { player.race = 'Nephilim'; player.kar += 10; player.hp += 10; addLog("Eres un Nephilim.", true); } },
+                        { t: "Constructo Arcano", eff: () => { player.race = 'Constructo'; player.int += 10; player.hp -= 10; addLog("Eres un Constructo.", true); } },
+                        { t: "Humano-Planta", eff: () => { player.race = 'Planta'; player.hp += 10; player.kar += 5; addLog("Eres un Humano-Planta.", true); } },
+                        { t: "Espectro", eff: () => { player.race = 'Espectro'; player.int += 5; player.kar -= 10; addLog("Eres un Espectro.", true); } },
+                        { t: "Orco", eff: () => { player.race = 'Orco'; player.hp += 15; player.int -= 5; addLog("Eres un Orco.", true); } },
+                        { t: "Elfo", eff: () => { player.race = 'Elfo'; player.int += 5; player.hp -= 10; addLog("Eres un Elfo.", true); } },
+                        { t: "IA", eff: () => { player.race = 'IA'; player.int += 15; player.hp -= 20; addLog("Eres una IA.", true); } }
+                    ]
+                },
+                'DEATH': { text: "El final. La luz se desvanece.", art: '', onLoad: () => player.hp = 0 }
+            },
+            childhood: [
+                { text: "Un matón te roba el almuerzo.", art: art.sword, options: [{ t: "Llorar.", eff: () => { player.kar -= 5; }}, { t: "Razonar con él.", eff: () => { if(player.int > 12) { player.int++; } else { player.hp -= 10; } }} ]},
+                { text: "Encuentras un gatito perdido en el bosque.", art: art.book, options: [{ t: "Llevarlo a casa.", eff: () => { player.kar += 10; addLog("Ganas un amigo fiel.", true); }}, { t: "Ignorarlo.", eff: () => { player.kar -= 5; addLog("A veces, la indiferencia es la peor crueldad."); }} ]}
+            ],
+            adolescence: [
+                { text: "Participas en el concurso de comer pasteles del festival.", art: art.portal, options: [{ t: "Comer con delicadeza."}, { t: "Devorar sin piedad.", eff: () => { player.hp += 5; }} ]},
+                { text: "Te enamoras por primera vez.", art: art.god, options: [{ t: "Declarar tu amor.", eff: () => { if(Math.random() > 0.5) {player.kar += 10; addLog("¡Es correspondido!");} else {player.kar -= 10; addLog("Te rechazan. Duele.");} }}, { t: "Sufrir en silencio.", eff: () => { player.int += 5; addLog("Tu tormento interior te hace más profundo. O eso te dices a ti mismo."); }} ]}
+            ],
+            adulthood: [
+                 { text: "El recaudador de impuestos visita tu morada.", art: art.sword, options: [{ t: "Pagarle.", eff: () => { player.kar += 5; }}, { t: "Declararte 'ciudadano soberano'.", eff: () => { player.hp -= 20; }} ]},
+                 { text: "Una plaga asola la región.", art: art.god, options: [{ t: "Ayudar a los enfermos.", eff: () => { if(Math.random() > 0.7) {player.hp -= 50; addLog("Te contagias y mueres. La caridad no siempre paga.");} else {player.kar += 20; addLog("Sobrevives y eres aclamado como un héroe.");} }}, { t: "Encerrarte en tu casa.", eff: () => { player.int += 5; addLog("Sobrevives. La soledad te da tiempo para pensar."); }} ]}
+            ],
+            space: [
+                { text: "Encuentras una nave abandonada.", art: art.rocket, options: [{ t: "¡Al espacio!", eff: () => { player.stage = 'space'; addLog("¡Despegas hacia lo desconocido!", true); }}, { t: "Venderla por piezas.", eff: () => { player.int += 5; }} ]},
+                { text: "Una nave pirata te exige un peaje.", art: art.sword, options: [{ t: "Pagarles.", eff: () => { player.kar -= 10; addLog("Te vas con menos dinero, pero con vida."); }}, { t: "Luchar.", eff: () => { if(player.hp > 80) {player.hp -= 20; addLog("Ganas, pero tu nave sufre daños.");} else {player.hp = 0; addLog("Te superaban en número y armamento.");} }} ]}
+            ],
+            puzzles: [
+                {
+                    text: "Un antiguo golem bloquea tu camino. 'Hablo en acertijos', retumba. 'Tengo ciudades, pero no casas. Tengo montañas, pero no árboles. Tengo agua, pero no peces. ¿Qué soy?'",
+                    art: art.puzzle,
+                    options: [
+                        { t: "Un sueño.", eff: () => { player.hp -= 20; addLog("Incorrecto. El golem te golpea por tu falta de lógica."); }},
+                        { t: "Un mapa.", eff: () => { player.int += 15; player.flags.add('PUZZLE_MASTER'); addLog("Correcto. El golem te permite pasar, impresionado por tu intelecto."); }},
+                        { t: "Una pintura.", eff: () => { player.hp -= 20; addLog("Incorrecto. El golem te lanza una roca."); }}
+                    ]
+                },
+                {
+                    text: "Una puerta espectral te susurra: 'Lo que un hombre puede hacer, solo un hombre puede ver. Lo que se eleva pero nunca crece, lo que cae pero nunca se rompe. ¿Qué es?'",
+                    art: art.puzzle,
+                    options: [
+                        { t: "La lluvia.", eff: () => { player.hp -= 20; addLog("Incorrecto. La puerta te electrocuta levemente."); }},
+                        { t: "El sol.", eff: () => { player.int += 15; addLog("Correcto. La puerta se desvanece, revelando un atajo."); }},
+                        { t: "La edad.", eff: () => { player.hp -= 20; addLog("Incorrecto. Sientes que envejeces un año de golpe."); player.age += 1;} }
+                    ]
+                }
+            ],
+            epic_encounters: [
+                {
+                    text: "Un dios caído, desterrado del panteón, te encuentra. 'Tu fuerza vital podría restaurarme', susurra con poder. 'Únete a mí o sé consumido'.",
+                    art: art.god,
+                    options: [
+                        { t: "Luchar contra el dios caído.", eff: () => { if (player.hp > 120 && player.int > 30) { player.flags.add('GOD_SLAYER'); player.hp += 50; player.int += 20; addLog("Derrotaste a un dios. Su esencia ahora es tuya.", true); } else { player.hp = 0; addLog("Fuiste aniquilado por un poder más allá de tu comprensión."); } }},
+                        { t: "Arrodillarte y ofrecer tu servidumbre.", eff: () => { player.kar -= 50; player.flags.add('GOD_SERVANT'); addLog("Te convertiste en el heraldo de un poder oscuro.", true); }}
+                    ]
+                },
+                {
+                    text: "Te encuentras ante el Crono-Emperador, que gobierna el flujo del tiempo. 'Tu línea temporal es una anomalía', declara. 'Debe ser podada'.",
+                    art: art.god,
+                    options: [
+                        { t: "Argumentar tu derecho a existir.", eff: () => { if(player.int > 50) {player.int += 20; addLog("Tu lógica es impecable. El Emperador, divertido, te permite continuar.");} else {player.hp = 0; addLog("Tus argumentos son infantiles. Te borra de la existencia.");} }},
+                        { t: "Atacarlo, desafiando al tiempo mismo.", eff: () => { if(player.hp > 150) {player.flags.add('TIME_WARRIOR'); addLog("No puedes derrotar al tiempo, pero tu audacia te permite escapar a una nueva línea temporal.", true);} else {player.hp = 0; addLog("Te congela en un instante eterno.");} }}
+                    ]
+                }
+            ]
+        };
+    }
+
+    function startGame() {
+        player.age = 0; player.hp = 100; player.int = 10; player.kar = 0; player.race = ''; player.stage = 'childhood'; player.flags = new Set(); player.majorDecisions = [];
+        eventPools = setupEvents();
+        updateUI();
+        nextEvent('ELEMENT_SELECTION');
+    }
+
+    function getEventFromPool() {
+        // Transición de etapas de la vida
+        if (player.age > 18 && player.stage === 'childhood') player.stage = 'adolescence';
+        if (player.age > 30 && player.stage === 'adolescence') player.stage = 'adulthood';
+        if (player.age > 50 && player.stage === 'adulthood') player.stage = 'space';
+
+        // Decide si sacar un evento normal, un puzle o uno épico
+        let poolChoice = Math.random();
+        let poolName = player.stage;
+
+        if (player.stage === 'adulthood' || player.stage === 'space') {
+            if (poolChoice < 0.15) { // 15% de probabilidad de encuentro épico
+                poolName = 'epic_encounters';
+            } else if (poolChoice < 0.40) { // 25% de probabilidad de puzle
+                poolName = 'puzzles';
+            }
+        }
+
+        let currentPool = eventPools[poolName] || eventPools[player.stage];
+
+        if (!currentPool || currentPool.length === 0) {
+            // Si la piscina específica está vacía, usa la piscina de la etapa actual
+            currentPool = eventPools[player.stage];
+            if (!currentPool || currentPool.length === 0) {
+                 return null; // No hay más eventos para esta etapa
+            }
+        }
+
+        const eventIndex = Math.floor(Math.random() * currentPool.length);
+        const event = currentPool[eventIndex];
+        currentPool.splice(eventIndex, 1); // No repetir
+        return event;
+    }
+
+    function nextEvent(eventId) {
+        if (player.hp <= 0) return endGame(`Moriste a los ${player.age} años.`);
+
+        const event = eventId ? eventPools.fixed[eventId] : getEventFromPool();
+
+        if (!event) {
+            if (player.stage === 'space') return endGame(`Te perdiste en la inmensidad del cosmos a los ${player.age} años.`);
+            // Avanza a la siguiente etapa si no hay más eventos
+            const stages = ['childhood', 'adolescence', 'adulthood', 'space'];
+            let currentStageIndex = stages.indexOf(player.stage);
+            if (currentStageIndex < stages.length - 1) {
+                player.stage = stages[currentStageIndex + 1];
+                return nextEvent();
+            }
+            return endGame(`Llegaste al final de tu camino a los ${player.age} años.`);
+        }
+
+        player.age += Math.floor(Math.random() * 5) + 1;
+        updateUI();
+
+        document.getElementById('ascii-display').innerText = event.art || '';
+        document.getElementById('sarcasm-label').innerText = sarcasticComments[Math.floor(Math.random() * sarcasticComments.length)];
+        document.getElementById('story').innerText = event.text;
+
+        const box = document.getElementById('choices');
+        box.innerHTML = '';
+
+        if (!event.options || event.options.length === 0) {
+            return setTimeout(() => nextEvent(), 2000);
+        }
+
+        event.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'choice-btn';
+            btn.innerText = opt.t;
+            btn.onclick = () => {
+                if (opt.eff) opt.eff();
+                nextEvent(opt.next);
+            };
+            box.appendChild(btn);
+        });
+    }
+
+    function updateUI() {
+        document.getElementById('stat-race').innerText = player.race || '?';
+        document.getElementById('stat-hp').innerText = player.hp;
+        document.getElementById('stat-int').innerText = player.int;
+        document.getElementById('stat-kar').innerText = player.kar;
+        document.getElementById('stat-age').innerText = player.age;
+    }
+
+    function addLog(msg, isMajor = false) {
+        const log = document.getElementById('log');
+        log.innerHTML = `<div>> ${msg}</div>` + log.innerHTML;
+        if (isMajor) player.majorDecisions.push(msg);
+    }
+
+    function endGame(finalMessage) {
+        let storySummary = player.majorDecisions.map(decision => `<li>${decision}</li>`).join('');
+        let summaryHTML = storySummary ? `<div style="text-align:left; font-size:0.9rem; margin-top:20px;"><h3>Tu Destino:</h3><ul>${storySummary}</ul></div>` : '';
+        document.getElementById('narrative-box').innerHTML = `<div class="death-screen">FIN<br><span style="font-size:1rem">${finalMessage}</span></div>${summaryHTML}`;
+        document.getElementById('choices').innerHTML = `<button class="choice-btn" onclick="location.reload()">Jugar de Nuevo</button>`;
+    }
+
+    startGame();
+</script>
+
+</body>
+</html>
