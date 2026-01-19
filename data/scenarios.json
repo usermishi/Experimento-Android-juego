@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "name": "Sala del Trono Gótico",
+    "background": "https://placehold.co/1280x720/1a1a1a/6a4f6a.png?text=Fondo+(Trono)",
+    "music": ""
+  },
+  {
+    "id": 2,
+    "name": "Jardín de Medianoche",
+    "background": "https://placehold.co/1280x720/4a2f4a/c5a1c5.png?text=Fondo+(Jardin)",
+    "music": ""
+  }
+]

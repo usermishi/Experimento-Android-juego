@@ -1,0 +1,108 @@
+/* --- GENERAL STYLES --- */
+body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* --- GAME CONTAINER --- */
+#game-container {
+    width: 100%;
+    max-width: 1280px; /* Common game resolution width */
+    height: 720px; /* Common game resolution height */
+    position: relative;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+    border: 2px solid #444;
+}
+
+/* --- SCENARIO & CHARACTERS --- */
+#scenario-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+}
+
+#scenario-background {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#character-container {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 90%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+#character-container img {
+    max-height: 100%;
+    max-width: 50%;
+    object-fit: contain;
+}
+
+/* --- DIALOGUE --- */
+#dialogue-container {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 1000px;
+    height: 200px;
+    background-color: rgba(20, 10, 20, 0.85);
+    border: 2px solid #6a4f6a;
+    border-radius: 10px;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+#speaker-name {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #c5a1c5;
+    margin-bottom: 10px;
+}
+
+#dialogue-text {
+    font-size: 1.2em;
+    flex-grow: 1;
+}
+
+/* --- CHOICES --- */
+#choices-container {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+}
+
+#choices-container button {
+    font-family: 'Georgia', serif;
+    background-color: #4a2f4a;
+    color: #e0e0e0;
+    border: 1px solid #c5a1c5;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+#choices-container button:hover {
+    background-color: #c5a1c5;
+    color: #1a1a1a;
+}

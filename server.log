@@ -1,0 +1,40 @@
+127.0.0.1 - - [19/Jan/2026 14:20:07] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:20:07] "GET /css/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:20:07] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:20:07] "GET /data/characters.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:20:07] "GET /data/scenarios.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:20:07] "GET /data/dialogues.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:20:07] code 404, message File not found
+127.0.0.1 - - [19/Jan/2026 14:20:07] "GET /assets/music/throne_room.mp3 HTTP/1.1" 404 -
+127.0.0.1 - - [19/Jan/2026 14:20:46] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:20:46] "GET /css/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:20:46] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:20:46] "GET /data/characters.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:20:46] "GET /data/dialogues.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:20:46] "GET /data/scenarios.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:20:46] code 404, message File not found
+127.0.0.1 - - [19/Jan/2026 14:20:46] "GET /assets/music/throne_room.mp3 HTTP/1.1" 404 -
+127.0.0.1 - - [19/Jan/2026 14:21:17] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:21:18] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:21:18] "GET /css/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:21:18] "GET /data/characters.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:21:18] "GET /data/scenarios.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:21:18] "GET /data/dialogues.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:21:18] code 404, message File not found
+127.0.0.1 - - [19/Jan/2026 14:21:18] "GET /assets/music/throne_room.mp3 HTTP/1.1" 404 -
+127.0.0.1 - - [19/Jan/2026 14:21:44] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:21:44] "GET /css/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:21:44] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:21:44] "GET /data/dialogues.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:21:44] "GET /data/scenarios.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:21:44] "GET /data/characters.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:21:44] code 404, message File not found
+127.0.0.1 - - [19/Jan/2026 14:21:44] "GET /assets/music/throne_room.mp3 HTTP/1.1" 404 -
+127.0.0.1 - - [19/Jan/2026 14:22:18] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:22:18] "GET /css/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:22:18] "GET /js/main.js HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:22:18] "GET /data/scenarios.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:22:18] "GET /data/characters.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:22:18] "GET /data/dialogues.json HTTP/1.1" 200 -
+127.0.0.1 - - [19/Jan/2026 14:22:18] code 404, message File not found
+127.0.0.1 - - [19/Jan/2026 14:22:18] "GET /assets/music/throne_room.mp3 HTTP/1.1" 404 -

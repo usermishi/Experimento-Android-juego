@@ -1,0 +1,35 @@
+{
+  "scene1": [
+    {
+      "characterId": 1,
+      "scenarioId": 1,
+      "text": "Bienvenida a mi dominio. Espero que tu estancia sea... placentera.",
+      "choices": [
+        {
+          "text": "Gracias por la bienvenida.",
+          "nextScene": "scene2"
+        },
+        {
+          "text": "¿Quién eres?",
+          "nextScene": "scene3"
+        }
+      ]
+    }
+  ],
+  "scene2": [
+    {
+      "characterId": 1,
+      "scenarioId": 1,
+      "text": "La educación es una virtud rara en estos tiempos. Me complace.",
+      "choices": []
+    }
+  ],
+  "scene3": [
+    {
+      "characterId": 1,
+      "scenarioId": 2,
+      "text": "Soy Kael, el señor de estas tierras. Y tú, mi invitada.",
+      "choices": []
+    }
+  ]
+}
