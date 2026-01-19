@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "name": "Mansión Abandonada",
+    "background_image": "assets/images/abandoned_mansion.jpg",
+    "background_music": "assets/music/dark_ambience.mp3"
+  },
+  {
+    "id": 2,
+    "name": "Jardín de Rosas Negras",
+    "background_image": "assets/images/black_rose_garden.jpg",
+    "background_music": "assets/music/mysterious_melody.mp3"
+  }
+]
