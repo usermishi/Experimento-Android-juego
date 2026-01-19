@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Corazón de Paladín: Destino Otome</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="flex justify-center items-center overflow-hidden text-white select-none bg-black">
+    <!-- Start Menu -->
+    <div id="start-menu" class="absolute inset-0 z-50 flex flex-col justify-center items-center bg-slate-950 p-8">
+        <h1 class="text-5xl title-font text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)] mb-4">Corazón de Paladín</h1>
+        <p class="text-xl text-gray-300 mb-8 italic">Un destino forjado en acero y romance</p>
+        <div class="w-full max-w-sm">
+            <label for="player-name" class="block text-lg text-yellow-400 mb-2">Introduce tu nombre:</label>
+            <input type="text" id="player-name" class="w-full p-3 bg-slate-800 border border-slate-600 rounded-lg text-white text-center text-lg focus:outline-none focus:ring-2 focus:ring-yellow-500" placeholder="Anya">
+            <button id="start-game-btn" class="w-full mt-4 p-4 bg-yellow-600 text-black font-bold rounded-full hover:bg-yellow-500 hover:scale-105 transition shadow-[0_0_20px_rgba(234,179,8,0.4)]">Comenzar Aventura</button>
+        </div>
+    </div>
+
+    <!-- Character Creation -->
+    <div id="character-creation-screen" class="absolute inset-0 z-50 flex-col justify-center items-center bg-slate-950 p-8 hidden">
+        <h2 class="text-3xl title-font text-yellow-500 mb-6">Crea tu Personaje</h2>
+        <div class="w-full max-w-md flex flex-col gap-4">
+            <div>
+                <label for="class-select" class="block text-lg text-yellow-400 mb-2">Elige tu Origen:</label>
+                <select id="class-select" class="w-full p-3 bg-slate-800 border border-slate-600 rounded-lg text-white">
+                    <option value="noble">Noble Caído</option>
+                    <option value="guard">Guardia Real</option>
+                    <option value="merchant">Mercader Errante</option>
+                    <option value="scholar">Erudito Aislado</option>
+                    <option value="urchin">Pícaro de Callejón</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-lg text-yellow-400 mb-2">Color de Pelo:</label>
+                <div id="hair-color-select" class="flex gap-2 justify-center">
+                    <button class="w-10 h-10 rounded-full bg-slate-800 border-2 border-transparent" data-color="bg-slate-800"></button>
+                    <button class="w-10 h-10 rounded-full bg-white border-2 border-transparent" data-color="bg-white"></button>
+                    <button class="w-10 h-10 rounded-full bg-red-600 border-2 border-transparent" data-color="bg-red-600"></button>
+                    <button class="w-10 h-10 rounded-full bg-yellow-500 border-2 border-transparent" data-color="bg-yellow-500"></button>
+                </div>
+            </div>
+             <div>
+                <label class="block text-lg text-yellow-400 mb-2">Color de Ropa:</label>
+                <div id="clothing-color-select" class="flex gap-2 justify-center">
+                    <button class="w-10 h-10 rounded-full bg-slate-300 border-2 border-transparent" data-color="bg-slate-300"></button>
+                    <button class="w-10 h-10 rounded-full bg-indigo-900 border-2 border-transparent" data-color="bg-indigo-900"></button>
+                    <button class="w-10 h-10 rounded-full bg-red-900 border-2 border-transparent" data-color="bg-red-900"></button>
+                    <button class="w-10 h-10 rounded-full bg-emerald-800 border-2 border-transparent" data-color="bg-emerald-800"></button>
+                </div>
+            </div>
+            <button id="confirm-character-btn" class="w-full mt-4 p-4 bg-yellow-600 text-black font-bold rounded-full hover:bg-yellow-500 hover:scale-105 transition">Confirmar</button>
+        </div>
+    </div>
+
+    <div id="game-wrapper" class="relative w-full h-full max-w-lg bg-slate-900 shadow-2xl flex flex-col overflow-hidden hidden">
+
+        <!-- Background Layer -->
+        <div id="background" class="absolute inset-0 bg-cover bg-center transition-all duration-1000 z-0 bg-gradient-to-b from-slate-800 to-black"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-black/60 z-0 pointer-events-none"></div>
+
+        <!-- UI Header -->
+        <div class="relative z-20 p-4 flex justify-between items-start">
+            <!-- Stats -->
+            <div class="flex flex-col gap-2 w-32">
+                <div>
+                    <div class="flex justify-between text-[10px] text-pink-300 font-bold uppercase"><span>Fuerza</span> <span id="val-str">10</span></div>
+                    <div class="stat-bar"><div id="stat-str" class="stat-fill bg-gradient-to-r from-red-400 to-pink-600" style="width: 10%"></div></div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-[10px] text-purple-300 font-bold uppercase"><span>Carisma</span> <span id="val-cha">10</span></div>
+                    <div class="stat-bar"><div id="stat-cha" class="stat-fill bg-gradient-to-r from-purple-400 to-indigo-600" style="width: 10%"></div></div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-[10px] text-blue-300 font-bold uppercase"><span>Sabiduría</span> <span id="val-wis">10</span></div>
+                    <div class="stat-bar"><div id="stat-wis" class="stat-fill bg-gradient-to-r from-blue-400 to-cyan-600" style="width: 10%"></div></div>
+                </div>
+            </div>
+
+            <!-- Day / Hearts -->
+            <div class="flex flex-col items-end">
+                <div id="gold-counter" class="text-lg text-yellow-400 font-bold hidden">Oro: <span>0</span></div>
+                <div class="title-font text-2xl text-yellow-500 font-bold drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">Día <span id="day-counter">1</span></div>
+                <div class="flex gap-1 mt-1 text-sm">
+                    <span id="heart-kael" class="opacity-30 transition-opacity duration-500">💙</span>
+                    <span id="heart-rylan" class="opacity-30 transition-opacity duration-500">💜</span>
+                    <span id="heart-rival" class="opacity-30 transition-opacity duration-500">❤️</span>
+                    <span id="heart-zarek" class="opacity-30 transition-opacity duration-500">🖤</span>
+                </div>
+                <button onclick="resetGame()" class="text-[9px] text-gray-500 uppercase mt-1 tracking-widest hover:text-white transition">Reiniciar</button>
+            </div>
+        </div>
+
+        <!-- Visual Area (Character & FX) -->
+        <div id="visual-area" class="relative flex-grow z-10 flex justify-center items-end pb-48 pointer-events-none perspective-1000">
+            <!-- Character Container -->
+            <div id="character-sprite" class="hidden transition-all duration-500 animate-float origin-bottom">
+                <!-- CSS Character Construction -->
+                <div class="relative w-64 h-80 filter drop-shadow-2xl">
+                    <!-- Aura -->
+                    <div id="char-aura" class="absolute inset-0 bg-white/0 rounded-full blur-xl transition-all duration-700"></div>
+
+                    <!-- Body Shape -->
+                    <div id="char-body" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-40 h-56 rounded-t-[3rem] shadow-inner transition-colors duration-500">
+                        <!-- Clothing Detail -->
+                        <div class="absolute top-10 left-1/2 -translate-x-1/2 w-4 h-full bg-black/20"></div>
+                        <div class="absolute top-20 left-1/2 -translate-x-1/2 w-28 h-2 bg-black/30 rounded-full"></div>
+                    </div>
+
+                    <!-- Head Shape -->
+                    <div id="char-head" class="absolute bottom-48 left-1/2 -translate-x-1/2 w-32 h-36 bg-[#ffdbac] rounded-2xl shadow-lg z-20">
+                         <!-- Blush -->
+                         <div id="char-blush" class="absolute top-16 w-full flex justify-between px-4 opacity-0 transition-opacity duration-500">
+                            <div class="w-6 h-3 bg-red-400/30 rounded-full blur-sm"></div>
+                            <div class="w-6 h-3 bg-red-400/30 rounded-full blur-sm"></div>
+                         </div>
+                    </div>
+
+                    <!-- Hair Shape (Back) -->
+                    <div id="char-hair-back" class="absolute bottom-44 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full -z-10 transition-colors duration-500"></div>
+
+                    <!-- Hair Shape (Front/Bangs) -->
+                    <div id="char-hair-front" class="absolute bottom-64 left-1/2 -translate-x-1/2 w-36 h-20 rounded-t-full z-30 transition-colors duration-500 mask-image-gradient"></div>
+
+                    <!-- Face Features -->
+                    <div class="absolute bottom-60 left-1/2 -translate-x-1/2 w-20 flex justify-between z-30">
+                        <!-- Eyes -->
+                        <div class="w-5 h-6 bg-slate-800 rounded-full relative overflow-hidden">
+                            <div class="absolute top-1 left-1 w-2 h-2 bg-white rounded-full opacity-60"></div>
+                        </div>
+                        <div class="w-5 h-6 bg-slate-800 rounded-full relative overflow-hidden">
+                            <div class="absolute top-1 left-1 w-2 h-2 bg-white rounded-full opacity-60"></div>
+                        </div>
+                    </div>
+
+                    <!-- Expression Icon -->
+                    <div id="char-emotion" class="absolute -top-4 right-4 text-5xl animate-bounce filter drop-shadow-lg z-50"></div>
+                </div>
+            </div>
+
+            <!-- Effect Overlay (Combat flashes etc) -->
+            <div id="fx-overlay" class="absolute inset-0 pointer-events-none"></div>
+        </div>
+
+        <!-- Dialogue & Input Area -->
+        <div class="absolute bottom-0 w-full z-30 flex flex-col pb-safe">
+
+            <!-- Dialogue Panel -->
+            <div class="glass-panel mx-3 mb-3 p-5 rounded-2xl shadow-2xl relative overflow-hidden min-h-[180px]">
+                <!-- Speaker Tag -->
+                <div class="absolute -top-3 left-4 px-4 py-1 bg-slate-900 border border-slate-700 rounded-full shadow-lg">
+                    <span id="speaker-name" class="font-bold text-yellow-400 title-font tracking-wide">Narrador</span>
+                </div>
+
+                <!-- Text Content -->
+                <div class="mt-3">
+                    <p id="dialogue-text" class="text-lg leading-relaxed text-gray-100 font-medium drop-shadow-md">
+                        Cargando historia...
+                    </p>
+                </div>
+
+                <!-- Continue Indicator -->
+                <div id="continue-btn" class="absolute bottom-3 right-5 text-yellow-400 animate-pulse text-sm font-bold cursor-pointer hidden">
+                    ▶ TOCAR
+                </div>
+            </div>
+
+            <!-- Choices Container (Overlays the dialogue when active) -->
+            <div id="choices-container" class="absolute bottom-0 w-full h-auto max-h-[70vh] bg-slate-950/95 backdrop-blur-xl rounded-t-3xl p-6 flex flex-col justify-end gap-3 transition-transform duration-300 transform translate-y-full pb-10 border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.8)]">
+                <!-- Buttons injected by JS -->
+            </div>
+        </div>
+
+        <!-- Fullscreen Overlay (Events, Endings) -->
+        <div id="full-overlay" class="absolute inset-0 bg-black/95 z-50 flex flex-col justify-center items-center text-center p-8 hidden opacity-0 transition-opacity duration-1000">
+            <h1 id="overlay-title" class="text-5xl text-yellow-500 title-font mb-4 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]"></h1>
+            <p id="overlay-desc" class="text-xl text-gray-300 mb-10 max-w-xs mx-auto italic font-light"></p>
+            <button onclick="hideOverlay()" class="px-8 py-4 bg-yellow-600 text-black font-bold rounded-full hover:bg-yellow-500 hover:scale-105 transition shadow-[0_0_20px_rgba(234,179,8,0.4)]">CONTINUAR</button>
+        </div>
+
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
