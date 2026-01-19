@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "scenario_id": 1,
+    "character_id": 1,
+    "text": "Bienvenida a mi morada. No esperaba visitas.",
+    "options": [
+      {
+        "text": "¿Quién eres tú?",
+        "next_dialogue_id": 2
+      },
+      {
+        "text": "Me he perdido.",
+        "next_dialogue_id": 3
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "scenario_id": 1,
+    "character_id": 1,
+    "text": "Soy Kael. Y tú, ¿qué haces en mis dominios?",
+    "options": []
+  },
+  {
+    "id": 3,
+    "scenario_id": 1,
+    "character_id": 1,
+    "text": "El destino te ha traído a mí.",
+    "options": []
+  }
+]
