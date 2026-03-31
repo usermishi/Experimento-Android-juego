@@ -1,4 +1,4 @@
-from telethon import TelegramClient
+from telethon import TelegramClient, types
 import asyncio
 import re
 
@@ -44,6 +44,28 @@ async def resolve_entity(client, identifier, name):
                 pass
         raise ValueError(f"No se encontró el {name}. Verifica que el enlace/ID es correcto y que estás unido al grupo.")
 
+def is_video(message):
+    """Verifica si el mensaje contiene un video o nota de video"""
+    if not message.media:
+        return False
+    # Verificamos si es un documento con mime_type de video
+    if isinstance(message.media, types.MessageMediaDocument):
+        if message.file and message.file.mime_type and message.file.mime_type.startswith('video/'):
+            return True
+    return False
+
+def is_photo(message):
+    """Verifica si el mensaje contiene una foto"""
+    return message.photo is not None
+
+def has_copyright_restriction(message):
+    """Verifica si el mensaje tiene restricciones por copyright"""
+    if message.restriction_reason:
+        for reason in message.restriction_reason:
+            if 'copyright' in reason.reason.lower():
+                return True
+    return False
+
 async def main():
     print("=" * 50)
     print("COPIADOR DE ARCHIVOS TELEGRAM")
@@ -70,7 +92,7 @@ async def main():
         return
 
     # CONFIRMACIÓN
-    confirmar = input(f"\n⚠️  Se copiarán todos los archivos de '{origen.title}' a '{destino.title}'\n¿Continuar? (s/n): ").lower()
+    confirmar = input(f"\n⚠️  Se copiarán los archivos filtrados de '{origen.title}' a '{destino.title}'\n¿Continuar? (s/n): ").lower()
     if confirmar != 's':
         print("Cancelado.")
         return
@@ -81,20 +103,47 @@ async def main():
 
     contador = 0
     errores = 0
+    buffer_fotos = []
 
     # COPIA DE ARCHIVOS
     async for message in client.iter_messages(origen, reverse=True):
-        if message.media:
-            try:
-                await client.send_message(destino, message)
-                contador += 1
-                print(f"✓ Copiado #{contador} (ID: {message.id})")
-                await asyncio.sleep(3)  # Espera de seguridad
+        if not message.media:
+            continue
 
-            except Exception as e:
-                errores += 1
-                print(f"✗ Error en mensaje {message.id}: {e}")
-                await asyncio.sleep(30)
+        # 1. Omitir mensajes con copyright
+        if has_copyright_restriction(message):
+            print(f"⚠ Saltando mensaje {message.id} (Copyright)")
+            continue
+
+        try:
+            if is_photo(message):
+                # Guardar en buffer si es foto
+                buffer_fotos.append(message)
+            elif is_video(message):
+                # Si es video, enviar buffer de fotos y luego el video
+                for msg_foto in buffer_fotos:
+                    await client.send_file(destino, msg_foto)
+                    contador += 1
+                    print(f"✓ Copiado Foto (ID: {msg_foto.id})")
+                    await asyncio.sleep(2)
+
+                buffer_fotos = [] # Limpiar buffer
+                await client.send_file(destino, message)
+                contador += 1
+                print(f"✓ Copiado Video (ID: {message.id})")
+                await asyncio.sleep(3)
+            else:
+                # Si es otro tipo de archivo (audio, doc, etc.), descartamos buffer de fotos
+                buffer_fotos = []
+                await client.send_file(destino, message)
+                contador += 1
+                print(f"✓ Copiado Otro Archivo (ID: {message.id})")
+                await asyncio.sleep(3)
+
+        except Exception as e:
+            errores += 1
+            print(f"✗ Error en mensaje {message.id}: {e}")
+            await asyncio.sleep(30)
 
     print(f"\n{'=' * 50}")
     print(f"✅ Proceso completado")
