@@ -1,4 +1,4 @@
-from telethon import TelegramClient, types
+from telethon import TelegramClient, types, errors
 import asyncio
 import re
 
@@ -110,9 +110,9 @@ async def main():
         if not message.media:
             continue
 
-        # 1. Omitir mensajes con copyright
+        # 1. Omitir mensajes con copyright (según metadata)
         if has_copyright_restriction(message):
-            print(f"⚠ Saltando mensaje {message.id} (Copyright)")
+            print(f"⚠ Saltando mensaje {message.id} (Copyright detectado en metadata)")
             continue
 
         try:
@@ -122,29 +122,52 @@ async def main():
             elif is_video(message):
                 # Si es video, enviar buffer de fotos y luego el video
                 for msg_foto in buffer_fotos:
-                    # Usamos message.media para que send_file funcione correctamente
-                    await client.send_file(destino, msg_foto.media, caption=msg_foto.message)
-                    contador += 1
-                    print(f"✓ Copiado Foto (ID: {msg_foto.id})")
-                    await asyncio.sleep(2)
+                    try:
+                        await client.send_file(destino, msg_foto.media, caption=msg_foto.message)
+                        contador += 1
+                        print(f"✓ Copiado Foto (ID: {msg_foto.id})")
+                        await asyncio.sleep(2)
+                    except (errors.ChatRestrictedError, errors.ChannelPrivateError):
+                        print(f"⚠ Error de derechos al copiar foto {msg_foto.id}. Saltando...")
+                    except Exception as photo_err:
+                        if 'copyright' in str(photo_err).lower():
+                            print(f"⚠ Saltando foto {msg_foto.id} por copyright (error de envío)")
+                        else:
+                            raise photo_err
 
                 buffer_fotos = [] # Limpiar buffer
-                await client.send_file(destino, message.media, caption=message.message)
-                contador += 1
-                print(f"✓ Copiado Video (ID: {message.id})")
-                await asyncio.sleep(3)
+                try:
+                    await client.send_file(destino, message.media, caption=message.message)
+                    contador += 1
+                    print(f"✓ Copiado Video (ID: {message.id})")
+                    await asyncio.sleep(3)
+                except (errors.ChatRestrictedError, errors.ChannelPrivateError):
+                    print(f"⚠ Error de derechos al copiar video {message.id}. Saltando...")
+                except Exception as video_err:
+                    if 'copyright' in str(video_err).lower():
+                        print(f"⚠ Saltando video {message.id} por copyright (error de envío)")
+                    else:
+                        raise video_err
             else:
                 # Si es otro tipo de archivo (audio, doc, etc.), descartamos buffer de fotos
                 buffer_fotos = []
-                await client.send_file(destino, message.media, caption=message.message)
-                contador += 1
-                print(f"✓ Copiado Otro Archivo (ID: {message.id})")
-                await asyncio.sleep(3)
+                try:
+                    await client.send_file(destino, message.media, caption=message.message)
+                    contador += 1
+                    print(f"✓ Copiado Otro Archivo (ID: {message.id})")
+                    await asyncio.sleep(3)
+                except (errors.ChatRestrictedError, errors.ChannelPrivateError):
+                    print(f"⚠ Error de derechos al copiar archivo {message.id}. Saltando...")
+                except Exception as other_err:
+                    if 'copyright' in str(other_err).lower():
+                        print(f"⚠ Saltando archivo {message.id} por copyright (error de envío)")
+                    else:
+                        raise other_err
 
         except Exception as e:
             errores += 1
-            print(f"✗ Error en mensaje {message.id}: {e}")
-            await asyncio.sleep(30)
+            print(f"✗ Error crítico en mensaje {message.id}: {e}")
+            await asyncio.sleep(10)
 
     print(f"\n{'=' * 50}")
     print(f"✅ Proceso completado")
