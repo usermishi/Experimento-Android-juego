@@ -122,20 +122,21 @@ async def main():
             elif is_video(message):
                 # Si es video, enviar buffer de fotos y luego el video
                 for msg_foto in buffer_fotos:
-                    await client.send_file(destino, msg_foto)
+                    # Usamos message.media para que send_file funcione correctamente
+                    await client.send_file(destino, msg_foto.media, caption=msg_foto.message)
                     contador += 1
                     print(f"✓ Copiado Foto (ID: {msg_foto.id})")
                     await asyncio.sleep(2)
 
                 buffer_fotos = [] # Limpiar buffer
-                await client.send_file(destino, message)
+                await client.send_file(destino, message.media, caption=message.message)
                 contador += 1
                 print(f"✓ Copiado Video (ID: {message.id})")
                 await asyncio.sleep(3)
             else:
                 # Si es otro tipo de archivo (audio, doc, etc.), descartamos buffer de fotos
                 buffer_fotos = []
-                await client.send_file(destino, message)
+                await client.send_file(destino, message.media, caption=message.message)
                 contador += 1
                 print(f"✓ Copiado Otro Archivo (ID: {message.id})")
                 await asyncio.sleep(3)
