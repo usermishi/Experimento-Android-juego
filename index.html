@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Corazón de Paladín: Renacer Oscuro</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
+
+        :root {
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #0a0a0e;
+            overscroll-behavior: none;
+            height: 100vh;
+            height: 100dvh;
+        }
+
+        .title-font { font-family: 'Cinzel', serif; }
+        .romantic-font { font-family: 'Dancing Script', cursive; }
+
+        .glass-panel {
+            background: rgba(10, 10, 14, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .inset-shadow {
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="flex justify-center items-center overflow-hidden text-white select-none bg-black">
+
+    <!-- Game Container -->
+    <div id="game-container" class="relative w-full h-full max-w-lg bg-slate-900 shadow-2xl flex flex-col overflow-hidden hidden">
+
+        <!-- Background Layer -->
+        <div id="background" class="absolute inset-0 bg-cover bg-center transition-all duration-1000 z-0 bg-gradient-to-b from-slate-800 to-black"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/70 z-0 pointer-events-none"></div>
+
+        <!-- Header UI -->
+        <header class="relative z-20 p-4 flex justify-between items-start">
+            <!-- Stats Section -->
+            <div id="stats-container" class="flex flex-col gap-2 w-40">
+                <!-- Stats will be dynamically added here -->
+            </div>
+            <!-- Day & Game Info -->
+            <div class="flex flex-col items-end">
+                 <div id="day-counter" class="title-font text-2xl text-red-500 font-bold">Día 1</div>
+                 <div id="inventory-container" class="mt-2 w-48 glass-panel p-2 rounded">
+                    <h3 class="text-sm font-bold text-red-400">Inventario</h3>
+                    <ul id="inventory-list" class="text-xs text-gray-300"></ul>
+                 </div>
+            </div>
+        </header>
+
+        <!-- Visual Area -->
+        <main id="visual-area" class="relative flex-grow z-10 flex justify-center items-end">
+            <!-- Character sprites will be added here -->
+        </main>
+
+        <!-- Dialogue & Choices Area -->
+        <footer id="dialogue-footer" class="absolute bottom-0 w-full z-30 p-4">
+            <div id="dialogue-panel" class="glass-panel p-5 rounded-xl inset-shadow">
+                <div id="speaker-name" class="title-font text-yellow-400 text-lg mb-2">Narrador</div>
+                <p id="dialogue-text" class="text-gray-200">La aventura está a punto de comenzar...</p>
+            </div>
+            <div id="choices-container" class="mt-4 flex flex-col gap-3">
+                <!-- Choices will be dynamically added here -->
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Start Menu -->
+    <div id="start-menu" class="absolute inset-0 z-50 flex flex-col justify-center items-center bg-black p-8">
+        <h1 class="text-5xl title-font text-red-700 drop-shadow-[0_0_15px_rgba(255,0,0,0.5)] mb-4">Corazón de Paladín</h1>
+        <p class="text-xl text-gray-400 mb-8 italic">Renacer Oscuro</p>
+        <div class="w-full max-w-sm">
+            <label for="player-name" class="block text-lg text-red-500 mb-2">Tu Nombre:</label>
+            <input type="text" id="player-name" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-white text-center text-lg focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Anya">
+            <button id="start-game-btn" class="w-full mt-4 p-4 bg-red-800 text-white font-bold rounded-full hover:bg-red-700 hover:scale-105 transition shadow-[0_0_20px_rgba(255,0,0,0.4)]">Forjar Destino</button>
+        </div>
+    </div>
+
+    <!-- Character Creation Screen -->
+    <div id="character-creation-screen" class="absolute inset-0 z-50 flex-col justify-center items-center bg-black p-4 hidden">
+        <h2 class="text-3xl title-font text-red-600 mb-4">Crea tu Avatar</h2>
+        <div class="w-full max-w-lg flex flex-col md:flex-row gap-8 items-center">
+
+            <!-- Left Panel: Customization Options -->
+            <div class="flex-1 w-full">
+                <div>
+                    <label for="class-select" class="block text-lg text-red-500 mb-2">Tu Origen:</label>
+                    <select id="class-select" class="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-white"></select>
+                    <p id="class-description" class="text-sm text-gray-400 mt-2 h-16"></p>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-lg text-red-500 mb-2">Color de Pelo:</label>
+                    <div id="hair-color-select" class="flex gap-2">
+                        <button class="w-10 h-10 rounded-full bg-black border-2 border-slate-700" data-color="bg-black"></button>
+                        <button class="w-10 h-10 rounded-full bg-white border-2 border-slate-700" data-color="bg-white"></button>
+                        <button class="w-10 h-10 rounded-full bg-red-700 border-2 border-slate-700" data-color="bg-red-700"></button>
+                        <button class="w-10 h-10 rounded-full bg-indigo-500 border-2 border-slate-700" data-color="bg-indigo-500"></button>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-lg text-red-500 mb-2">Color de Ropa:</label>
+                    <div id="clothing-color-select" class="flex gap-2">
+                         <button class="w-10 h-10 rounded-full bg-slate-800 border-2 border-slate-700" data-color="bg-slate-800"></button>
+                         <button class="w-10 h-10 rounded-full bg-red-900 border-2 border-slate-700" data-color="bg-red-900"></button>
+                         <button class="w-10 h-10 rounded-full bg-purple-900 border-2 border-slate-700" data-color="bg-purple-900"></button>
+                         <button class="w-10 h-10 rounded-full bg-gray-300 border-2 border-slate-700" data-color="bg-gray-300"></button>
+                    </div>
+                </div>
+                <button id="confirm-character-btn" class="w-full mt-6 p-4 bg-red-800 text-white font-bold rounded-full hover:bg-red-700">Comenzar</button>
+            </div>
+
+            <!-- Right Panel: Character Preview -->
+            <div class="flex-1 flex justify-center items-center h-80">
+                <div class="relative w-48 h-72">
+                    <div id="preview-body" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-48 bg-gray-800 rounded-t-[2rem]"></div>
+                    <div id="preview-head" class="absolute bottom-40 left-1/2 -translate-x-1/2 w-24 h-28 bg-[#ffdbac] rounded-2xl z-20"></div>
+                    <div id="preview-hair-back" class="absolute bottom-36 left-1/2 -translate-x-1/2 w-36 h-36 bg-black rounded-full -z-10"></div>
+                    <div id="preview-hair-front" class="absolute bottom-56 left-1/2 -translate-x-1/2 w-28 h-16 bg-black rounded-t-full z-30"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script id="game-logic">
+        // --- DOM ELEMENT REFERENCES ---
+        const el = {
+            gameContainer: document.getElementById('game-container'),
+            statsContainer: document.getElementById('stats-container'),
+            dayCounter: document.getElementById('day-counter'),
+            visualArea: document.getElementById('visual-area'),
+            dialoguePanel: document.getElementById('dialogue-panel'),
+            speakerName: document.getElementById('speaker-name'),
+            dialogueText: document.getElementById('dialogue-text'),
+            choicesContainer: document.getElementById('choices-container'),
+            // Screens
+            startMenu: document.getElementById('start-menu'),
+            characterCreationScreen: document.getElementById('character-creation-screen'),
+            // Character Creation Elements
+            classSelect: document.getElementById('class-select'),
+            classDescription: document.getElementById('class-description'),
+            hairColorSelect: document.getElementById('hair-color-select'),
+            clothingColorSelect: document.getElementById('clothing-color-select'),
+            confirmCharacterBtn: document.getElementById('confirm-character-btn'),
+            playerNameInput: document.getElementById('player-name'),
+            startGameBtn: document.getElementById('start-game-btn'),
+            // Preview Sprite
+            preview: {
+                body: document.getElementById('preview-body'),
+                head: document.getElementById('preview-head'),
+                hairBack: document.getElementById('preview-hair-back'),
+                hairFront: document.getElementById('preview-hair-front'),
+            }
+        };
+
+        // --- CORE GAME DATABASES ---
+
+        // Defines all possible items in the game
+        const ITEMS = {
+            'gold': { name: 'Oro', description: 'La moneda del reino.', price: 1 },
+            'health_potion': { name: 'Poción de Salud', description: 'Restaura un poco de vitalidad.', effect: { hp: 20 }, price: 20 },
+            'mana_potion': { name: 'Poción de Maná', description: 'Restaura tu energía arcana.', effect: { mp: 20 }, price: 25 },
+            'ancient_sword': { name: 'Espada Antigua', description: 'Un arma con un oscuro pasado.', stats: { str: 5 }, price: 100 },
+            'poison_dagger': { name: 'Daga Envenenada', description: 'Perfecta para ataques sigilosos.', stats: { agi: 3 }, price: 80 },
+            'love_letter': { name: 'Carta de Amor', description: 'Un objeto para momentos especiales.', price: 500 },
+            'shadow_cloak': { name: 'Capa Sombría', description: 'Mejora tu sigilo.', stats: { agi: 2 }, price: 150 },
+            'forbidden_tome': { name: 'Tomo Prohibido', description: 'Conocimiento antiguo a un precio.', stats: { wis: 3 }, price: 200 },
+        };
+
+        // Defines shops and their inventories
+        const SHOPS = {
+            'curio_shop': {
+                name: 'Tienda de Curiosidades de la Medianoche',
+                inventory: ['health_potion', 'poison_dagger', 'shadow_cloak']
+            }
+        };
+
+        // Defines all character classes
+        const CLASSES = {
+            'vampire_noble': {
+                name: 'Noble Vampiro',
+                description: 'Nacido en la opulencia y la oscuridad, manipulas las sombras y los corazones.',
+                baseStats: { str: 5, cha: 10, wis: 8, agi: 7 },
+                inventory: [{ item: 'gold', quantity: 50 }, { item: 'poison_dagger', quantity: 1 }]
+            },
+            'cursed_knight': {
+                name: 'Caballero Maldito',
+                description: 'Atado a una armadura viviente, tu fuerza es tan grande como tu tormento.',
+                baseStats: { str: 12, cha: 5, wis: 5, agi: 5 },
+                inventory: [{ item: 'ancient_sword', quantity: 1 }, { item: 'health_potion', quantity: 1 }]
+            },
+            'blood_sorceress': {
+                name: 'Hechicera de Sangre',
+                description: 'Pagas tus hechizos con vitalidad, un poder tan seductor como peligroso.',
+                baseStats: { str: 4, cha: 9, wis: 10, agi: 6 },
+                inventory: [{ item: 'gold', quantity: 30 }, { item: 'health_potion', quantity: 3 }]
+            },
+            'shadow_stalker': {
+                name: 'Sombra Acechante',
+                description: 'El callejón es tu reino. Te mueves sin ser visto, un fantasma con una daga.',
+                baseStats: { str: 6, cha: 6, wis: 7, agi: 10 },
+                inventory: [{ item: 'gold', quantity: 20 }, { item: 'poison_dagger', quantity: 1 }, { item: 'shadow_cloak', quantity: 1 }]
+            },
+            'arcane_bard': {
+                name: 'Bardo Arcano',
+                description: 'Tus melodías encantan, maldicen y abren secretos que otros no pueden ver.',
+                baseStats: { str: 5, cha: 11, wis: 8, agi: 6 },
+                inventory: [{ item: 'gold', quantity: 40 }]
+            },
+            'iron_sentinel': {
+                name: 'Centinela de Hierro',
+                description: 'Inquebrantable y leal, eres el muro contra el que la oscuridad se estrella.',
+                baseStats: { str: 10, cha: 4, wis: 6, agi: 4 },
+                inventory: [{ item: 'ancient_sword', quantity: 1 }]
+            },
+            'forgotten_scholar': {
+                name: 'Erudito Olvidado',
+                description: 'Buscas conocimiento prohibido, sin importar el precio para tu cordura.',
+                baseStats: { str: 4, cha: 5, wis: 12, agi: 5 },
+                inventory: [{ item: 'gold', quantity: 60 }]
+            },
+            'relic_merchant': {
+                name: 'Mercader de Reliquias',
+                description: 'Cada objeto tiene una historia y un precio. Conoces el valor de ambos.',
+                baseStats: { str: 6, cha: 9, wis: 9, agi: 5 },
+                inventory: [{ item: 'gold', quantity: 100 }]
+            },
+            'spectral_duelist': {
+                name: 'Duelista Espectral',
+                description: 'Tu esgrima es etérea y mortal, un baile con un compañero invisible.',
+                baseStats: { str: 8, cha: 7, wis: 6, agi: 9 },
+                inventory: [{ item: 'poison_dagger', quantity: 1 }]
+            },
+            'abyss_oracle': {
+                name: 'Oráculo del Abismo',
+                description: 'Miras en el vacío y el vacío te devuelve la mirada, susurrándote verdades.',
+                baseStats: { str: 4, cha: 7, wis: 11, agi: 5 },
+                inventory: [{ item: 'gold', quantity: 30 }]
+            }
+        };
+
+        // Defines all characters (love interests, enemies, etc.)
+        const CHARACTERS = {
+            'narrator': { name: 'Narrador' },
+            'protagonist': { name: 'Anya' }, // Default name
+            'kael': { name: 'Sir Kael' },
+            'zarek': { name: 'Zarek, el Sombra' },
+            // ... more characters
+        };
+
+        // --- GAME STATE MANAGEMENT ---
+        let state = {};
+
+        const initialState = {
+            day: 1,
+            player: {
+                name: 'Anya',
+                class: 'vampire_noble',
+                stats: {}, // Will be populated by class choice
+                inventory: [],
+                appearance: {
+                    hair: 'bg-black',
+                    clothing: 'bg-red-900'
+                }
+            },
+            affinity: {
+                kael: 0,
+                zarek: 0,
+            },
+            flags: {}, // For tracking story decisions
+            currentScene: 'prologue_1'
+        };
+
+        // --- STORY CONTENT DATABASE (SCALABLE) ---
+        // This is where the 150,000+ situations would go.
+        // Each key is a unique scene ID. The content dictates what happens.
+        const SCENES = {
+            'prologue_1': {
+                speaker: 'narrator',
+                text: 'Las gárgolas de la ciudadela te observan en silencio. Una nueva vida, o una nueva muerte, te espera en estas calles de eterna penumbra.',
+                next: 'prologue_2'
+            },
+            'prologue_2': {
+                speaker: 'narrator',
+                text: 'Tu pasado es una sombra, pero tu futuro es un lienzo en blanco listo para ser teñido de rojo. ¿Qué camino elegirás?',
+                choices: [
+                    { text: 'Buscar poder en los callejones.', next: 'alley_intro' },
+                    { text: 'Navegar la política de la corte.', next: 'court_intro' },
+                    { text: 'Visitar la tienda de curiosidades.', next: 'enter_shop' }
+                ]
+            },
+            'enter_shop': {
+                speaker: 'narrator',
+                text: 'Te adentras en una tienda iluminada por velas, llena de artefactos extraños.',
+                shop: 'curio_shop',
+                next: 'prologue_2' // Where to go after leaving the shop
+            },
+            'alley_intro': {
+                speaker: 'narrator',
+                text: 'El callejón huele a lluvia y secretos. Una figura encapuchada te observa desde las sombras. Es Zarek.',
+                next: 'zarek_encounter_1'
+            },
+            'zarek_encounter_1': {
+                speaker: 'zarek',
+                text: 'No eres de por aquí. Los nuevos no suelen durar mucho. ¿Qué buscas, forastero?',
+                choices: [
+                    { text: '"Busco respuestas."', next: 'zarek_answers' },
+                    { text: '"No es de tu incumbencia."', next: 'zarek_hostile' }
+                ]
+            },
+            'zarek_answers': {
+                speaker: 'zarek',
+                text: 'Respuestas... Una mercancía peligrosa. Sígueme, si te atreves. Pero ten cuidado de no perderte en las sombras.',
+                next: 'game_loop_start'
+            },
+            'zarek_hostile': {
+                speaker: 'zarek',
+                text: 'Hmph. Esa actitud te traerá problemas. Desaparece de mi vista.',
+                next: 'game_loop_start'
+            },
+            'court_intro': {
+                speaker: 'narrator',
+                text: 'El salón del trono es un nido de víboras con vestidos de seda. El apuesto Sir Kael te ofrece una copa de vino.',
+                next: 'kael_encounter_1'
+            },
+            'kael_encounter_1': {
+                speaker: 'kael',
+                text: 'Bienvenido a la corte. Espero que disfrutes de la velada. Pero ten cuidado, no todo lo que brilla es oro.',
+                choices: [
+                    { text: '"Gracias por el consejo."', next: 'kael_friendly' },
+                    { text: '"Sé cuidarme solo."', next: 'kael_distant' }
+                ]
+            },
+            'kael_friendly': {
+                speaker: 'kael',
+                text: 'Me alegra oírlo. Si necesitas un aliado, búscame. La noche es larga y llena de peligros.',
+                effect: { flags: { kael_met: true } },
+                next: 'game_loop_start'
+            },
+            'kael_distant': {
+                speaker: 'kael',
+                text: 'Ya veo. Bueno, que tengas suerte. La necesitarás.',
+                next: 'game_loop_start'
+            },
+            'game_loop_start': {
+                speaker: 'narrator',
+                text: 'Un nuevo día comienza en la ciudadela. El aire es frío y la niebla se aferra a los adoquines. ¿Qué harás hoy?',
+                choices: [
+                    { text: 'Entrenar en el patio de armas (Aumenta Fuerza).', next: 'training_str' },
+                    { text: 'Pasar el rato en la corte (Aumenta Carisma).', next: 'training_cha' },
+                    { text: 'Volver a hablar con Kael.', next: 'kael_encounter_2', condition: () => state.flags.kael_met },
+                    { text: 'Visitar la tienda de nuevo.', next: 'enter_shop' }
+                ]
+            },
+            'training_str': {
+                speaker: 'narrator',
+                text: 'El choque del acero resuena en el patio. Pasas horas entrenando, tu cuerpo duele pero tu espíritu se fortalece. (Fuerza +1)',
+                effect: { stats: { str: 1 } },
+                next: 'game_loop_start'
+            },
+            'training_cha': {
+                speaker: 'narrator',
+                text: 'Navegas las conversaciones de la corte, aprendiendo a leer las intenciones ocultas tras las sonrisas. (Carisma +1)',
+                effect: { stats: { cha: 1 } },
+                next: 'game_loop_start'
+            },
+            'kael_encounter_2': {
+                speaker: 'kael',
+                text: 'Ah, nos volvemos a encontrar. Me alegra ver una cara amiga en este nido de víboras.',
+                choices: [
+                    { text: '"Pienso lo mismo." (Afinidad con Kael+)', effect: { affinity: { kael: 1 } }, next: 'game_loop_start' },
+                    { text: '"Solo pasaba por aquí."', next: 'game_loop_start' }
+                ]
+            }
+        };
+
+        // --- GAME LOGIC FUNCTIONS ---
+
+        function saveGame() {
+            localStorage.setItem('dark_otome_save', JSON.stringify(state));
+        }
+
+        function loadGame() {
+            const savedGame = localStorage.getItem('dark_otome_save');
+            if (savedGame) {
+                state = JSON.parse(savedGame);
+            } else {
+                // Deep copy of initial state to avoid mutation issues
+                state = JSON.parse(JSON.stringify(initialState));
+            }
+        }
+
+        function showScreen(screenId) {
+            // Hide all screens and remove flex property where applicable
+            el.startMenu.classList.add('hidden');
+            el.characterCreationScreen.classList.add('hidden');
+            el.characterCreationScreen.classList.remove('flex');
+            el.gameContainer.classList.add('hidden');
+            el.gameContainer.classList.remove('flex');
+
+            const screenToShow = document.getElementById(screenId);
+            if (screenToShow) {
+                screenToShow.classList.remove('hidden');
+                // Add flex display to screens that need it
+                if (screenId === 'character-creation-screen' || screenId === 'game-container') {
+                    screenToShow.classList.add('flex');
+                }
+            }
+        }
+
+        function updateInventoryUI() {
+            el.inventoryList.innerHTML = '';
+            // Consolidate items
+            const consolidated = {};
+            for (const item of state.player.inventory) {
+                if (consolidated[item.item]) {
+                    consolidated[item.item].quantity += item.quantity;
+                } else {
+                    consolidated[item.item] = { ...item };
+                }
+            }
+
+            for (const itemId in consolidated) {
+                const item = consolidated[itemId];
+                const itemData = ITEMS[item.item];
+                if (itemData) {
+                    const li = document.createElement('li');
+                    li.textContent = `${itemData.name} x${item.quantity}`;
+                    el.inventoryList.appendChild(li);
+                }
+            }
+        }
+
+        function updateStatsUI() {
+            el.statsContainer.innerHTML = '';
+            for (const stat in state.player.stats) {
+                const value = state.player.stats[stat];
+                const statEl = document.createElement('div');
+                statEl.innerHTML = `<span class="font-bold text-red-400">${stat.toUpperCase()}:</span> ${value}`;
+                el.statsContainer.appendChild(statEl);
+            }
+        }
+
+        function applyEffect(effect) {
+            if (!effect) return;
+
+            if (effect.stats) {
+                for (const stat in effect.stats) {
+                    state.player.stats[stat] += effect.stats[stat];
+                }
+                updateStatsUI();
+            }
+            if (effect.affinity) {
+                for (const char in effect.affinity) {
+                    state.affinity[char] += effect.affinity[char];
+                }
+                // TODO: Update affinity UI if we add one
+            }
+            if (effect.flags) {
+                for (const flag in effect.flags) {
+                    state.flags[flag] = effect.flags[flag];
+                }
+            }
+        }
+
+        function renderScene(sceneId) {
+            const scene = SCENES[sceneId];
+            if (!scene) {
+                console.error(`Scene "${sceneId}" not found!`);
+                return;
+            }
+
+            // Apply scene effect before rendering
+            applyEffect(scene.effect);
+
+            state.currentScene = sceneId;
+            el.speakerName.textContent = CHARACTERS[scene.speaker]?.name || '...';
+            el.dialogueText.textContent = scene.text;
+
+            el.choicesContainer.innerHTML = '';
+            if (scene.choices) {
+                scene.choices
+                    .filter(choice => choice.condition ? choice.condition() : true)
+                    .forEach(choice => {
+                        const button = document.createElement('button');
+                        button.className = 'w-full p-3 bg-slate-800 hover:bg-red-800 rounded text-left';
+                        button.textContent = choice.text;
+                        button.onclick = () => {
+                            applyEffect(choice.effect);
+                            if (choice.next) {
+                                renderScene(choice.next);
+                            }
+                        };
+                        el.choicesContainer.appendChild(button);
+                    });
+            } else if (scene.shop) {
+                const shop = SHOPS[scene.shop];
+                el.dialogueText.textContent = `Bienvenido a ${shop.name}. ¿Qué te interesa?`;
+                shop.inventory.forEach(itemId => {
+                    const item = ITEMS[itemId];
+                    const button = document.createElement('button');
+                    button.className = 'w-full p-3 bg-slate-800 hover:bg-red-800 rounded text-left';
+                    button.textContent = `Comprar ${item.name} (${item.price} Oro)`;
+                    button.onclick = () => {
+                        const gold = state.player.inventory.find(i => i.item === 'gold');
+                        if (gold && gold.quantity >= item.price) {
+                            gold.quantity -= item.price;
+                            state.player.inventory.push({ item: itemId, quantity: 1 });
+                            updateInventoryUI();
+                            // Re-render shop to show updated gold
+                            renderScene(sceneId);
+                        } else {
+                            // Not enough gold, show a message or disable button
+                            el.dialogueText.textContent = "No tienes suficiente oro para esto.";
+                            setTimeout(() => renderScene(sceneId), 1500);
+                        }
+                    };
+                    el.choicesContainer.appendChild(button);
+                });
+                // Add leave button
+                const leaveButton = document.createElement('button');
+                leaveButton.className = 'w-full p-3 bg-slate-700 hover:bg-slate-600 rounded text-left mt-2';
+                leaveButton.textContent = "Marcharse";
+                leaveButton.onclick = () => renderScene(scene.next);
+                el.choicesContainer.appendChild(leaveButton);
+            } else if (scene.next) {
+                const button = document.createElement('button');
+                button.className = 'w-full p-3 bg-slate-800 hover:bg-red-800 rounded text-left';
+                button.textContent = "Continuar...";
+                button.onclick = () => renderScene(scene.next);
+                el.choicesContainer.appendChild(button);
+            }
+            saveGame();
+        }
+
+        function updatePreviewSprite() {
+            const appearance = state.player.appearance;
+            // Remove old classes and add new ones
+            el.preview.hairBack.className = `absolute bottom-36 left-1/2 -translate-x-1/2 w-36 h-36 rounded-full -z-10 transition-colors ${appearance.hair}`;
+            el.preview.hairFront.className = `absolute bottom-56 left-1/2 -translate-x-1/2 w-28 h-16 rounded-t-full z-30 transition-colors ${appearance.hair}`;
+            el.preview.body.className = `absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-48 rounded-t-[2rem] transition-colors ${appearance.clothing}`;
+        }
+
+        function populateClassSelector() {
+            for (const classId in CLASSES) {
+                const option = document.createElement('option');
+                option.value = classId;
+                option.textContent = CLASSES[classId].name;
+                el.classSelect.appendChild(option);
+            }
+            // Set initial description
+            const initialClassId = el.classSelect.value;
+            el.classDescription.textContent = CLASSES[initialClassId].description;
+        }
+
+        function init() {
+            console.log("Initializing game...");
+            loadGame();
+
+            // --- EVENT LISTENERS ---
+            el.startGameBtn.addEventListener('click', () => {
+                const playerName = el.playerNameInput.value.trim();
+                if(playerName) {
+                    state.player.name = playerName;
+                    CHARACTERS.protagonist.name = playerName;
+                }
+                populateClassSelector();
+                updatePreviewSprite();
+                showScreen('character-creation-screen');
+            });
+
+            el.classSelect.addEventListener('change', (e) => {
+                const selectedClassId = e.target.value;
+                el.classDescription.textContent = CLASSES[selectedClassId].description;
+                state.player.class = selectedClassId;
+            });
+
+            el.hairColorSelect.addEventListener('click', (e) => {
+                if(e.target.dataset.color) {
+                    state.player.appearance.hair = e.target.dataset.color;
+                    updatePreviewSprite();
+                    // Visual feedback for selection
+                    el.hairColorSelect.querySelectorAll('button').forEach(btn => btn.classList.remove('border-red-500'));
+                    e.target.classList.add('border-red-500');
+                }
+            });
+
+            el.clothingColorSelect.addEventListener('click', (e) => {
+                if(e.target.dataset.color) {
+                    state.player.appearance.clothing = e.target.dataset.color;
+                    updatePreviewSprite();
+                     // Visual feedback for selection
+                    el.clothingColorSelect.querySelectorAll('button').forEach(btn => btn.classList.remove('border-red-500'));
+                    e.target.classList.add('border-red-500');
+                }
+            });
+
+            el.confirmCharacterBtn.addEventListener('click', () => {
+                // Set final class and stats
+                const selectedClass = CLASSES[state.player.class];
+                state.player.stats = { ...selectedClass.baseStats };
+                state.player.inventory = [ ...selectedClass.inventory ];
+
+                // Reset progress and start game
+                state.day = 1;
+                state.affinity = JSON.parse(JSON.stringify(initialState.affinity));
+                state.flags = {};
+                state.currentScene = 'prologue_1';
+
+                saveGame();
+                // Initialize game UI
+                updateStatsUI();
+                updateInventoryUI();
+                showScreen('game-container');
+                renderScene(state.currentScene);
+            });
+
+            // By default, show the start menu
+            showScreen('start-menu');
+        }
+
+        // --- Start the game ---
+        init();
+
+    </script>
+</body>
+</html>
