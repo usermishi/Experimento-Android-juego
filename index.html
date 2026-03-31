@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Arena Romana: PvP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --roman-red: #8B0000;
+            --roman-gold: #FFD700;
+            --roman-sand: #C2B280;
+        }
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #1a1a1a;
+            color: #e5e5e5;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+        h1, h2, h3, .cinzel {
+            font-family: 'Cinzel', serif;
+        }
+        .arena-bg {
+            background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1552526879-114bf74ee182?auto=format&fit=crop&q=80&w=1000');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        .btn-roman {
+            background-color: var(--roman-red);
+            color: white;
+            border: 2px solid var(--roman-gold);
+            padding: 10px 20px;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn-roman:active {
+            transform: scale(0.95);
+            background-color: #a00000;
+        }
+        .screen {
+            display: none;
+            min-height: 100vh;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+            opacity: 1;
+        }
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+    </style>
+</head>
+<body class="arena-bg">
+    <div id="game-container" class="max-w-md mx-auto min-h-screen flex flex-col p-4 shadow-2xl bg-black/40 backdrop-blur-sm">
+
+        <!-- Menu Screen -->
+        <section id="menu-screen" class="screen active justify-center items-center text-center">
+            <h1 class="text-4xl font-bold mb-8 text-yellow-500 drop-shadow-md cinzel">ARENA ROMANA</h1>
+            <p class="mb-8 text-lg">Forja tu leyenda en la arena del Coliseo.</p>
+            <div class="w-full space-y-4">
+                <button onclick="setGameMode('pve')" class="btn-roman w-full">Jugador vs IA</button>
+                <button onclick="setGameMode('pvp')" class="btn-roman w-full">Local PvP (2 Jugadores)</button>
+                <button onclick="alert('Próximamente')" class="btn-roman w-full opacity-50">Opciones</button>
+            </div>
+        </section>
+
+        <!-- Customization Screen -->
+        <section id="customization-screen" class="screen justify-start items-center p-4">
+            <h2 id="custom-title" class="text-2xl font-bold mb-6 text-yellow-500 cinzel text-center">Crea tu Guerrero</h2>
+            <div id="custom-form" class="w-full space-y-6 overflow-y-auto pb-8">
+                <div>
+                    <label class="block mb-2 text-sm uppercase font-bold">Nombre</label>
+                    <input type="text" id="char-name" class="w-full bg-stone-800 border-2 border-stone-600 p-3 text-white focus:border-yellow-500 outline-none" placeholder="Ingresa tu nombre...">
+                </div>
+
+                <div>
+                    <label class="block mb-2 text-sm uppercase font-bold">Raza / Origen</label>
+                    <div id="race-options" class="grid grid-cols-3 gap-2"></div>
+                </div>
+
+                <div>
+                    <label class="block mb-2 text-sm uppercase font-bold">Tribu</label>
+                    <select id="tribu-select" class="w-full bg-stone-800 border-2 border-stone-600 p-3 text-white"></select>
+                </div>
+
+                <div>
+                    <label class="block mb-2 text-sm uppercase font-bold">Nacionalidad</label>
+                    <select id="nacionalidad-select" class="w-full bg-stone-800 border-2 border-stone-600 p-3 text-white"></select>
+                </div>
+
+                <div>
+                    <label class="block mb-2 text-sm uppercase font-bold">Atuendo (Armadura)</label>
+                    <div id="outfit-options" class="grid grid-cols-2 gap-2"></div>
+                </div>
+
+                <div class="pt-4">
+                    <button onclick="handleCustomizationDone()" class="btn-roman w-full">Siguiente</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Arena Selection Screen -->
+        <section id="arena-screen" class="screen justify-start items-center p-4">
+            <h2 class="text-2xl font-bold mb-6 text-yellow-500 cinzel text-center">Selecciona la Arena</h2>
+            <div id="arena-options" class="w-full space-y-4"></div>
+            <div class="mt-auto w-full pt-4">
+                <button onclick="showScreen('shop-screen')" class="btn-roman w-full">Continuar al Mercado</button>
+            </div>
+        </section>
+
+        <!-- Shop Screen -->
+        <section id="shop-screen" class="screen justify-start items-center p-4">
+            <div class="flex justify-between w-full mb-4 items-center">
+                <h2 id="shop-title" class="text-2xl font-bold text-yellow-500 cinzel">Mercado</h2>
+                <div class="bg-stone-800 px-3 py-1 border border-yellow-500 text-yellow-500 font-bold">
+                    <span id="player-gold">50</span> 💰
+                </div>
+            </div>
+
+            <div class="w-full mb-6 overflow-y-auto">
+                <h3 class="text-sm uppercase font-bold text-stone-400 mb-2 border-b border-stone-700">Rudimentarias</h3>
+                <div id="basic-weapons" class="grid grid-cols-1 gap-2"></div>
+            </div>
+
+            <div class="w-full mb-6 overflow-y-auto">
+                <h3 class="text-sm uppercase font-bold text-stone-400 mb-2 border-b border-stone-700">Avanzadas</h3>
+                <div id="advanced-weapons" class="grid grid-cols-1 gap-2"></div>
+            </div>
+
+            <div class="mt-auto w-full pt-4">
+                <button id="shop-next-btn" onclick="handleShopDone()" class="btn-roman w-full">A la Batalla</button>
+            </div>
+        </section>
+
+        <!-- Battle Screen -->
+        <section id="battle-screen" class="screen justify-start items-center p-4">
+            <div class="w-full flex justify-between items-center mb-6">
+                <div class="text-left">
+                    <p id="p1-battle-name" class="font-bold text-yellow-500 cinzel">Jugador 1</p>
+                    <div class="w-32 h-3 bg-stone-800 border border-stone-600">
+                        <div id="p1-hp-bar" class="h-full bg-green-600 transition-all duration-300" style="width: 100%"></div>
+                    </div>
+                    <p class="text-xs mt-1"><span id="p1-hp-text">100</span> HP</p>
+                </div>
+                <div class="text-right">
+                    <p id="p2-battle-name" class="font-bold text-red-500 cinzel">Jugador 2</p>
+                    <div class="w-32 h-3 bg-stone-800 border border-stone-600">
+                        <div id="p2-hp-bar" class="h-full bg-red-600 transition-all duration-300 ml-auto" style="width: 100%"></div>
+                    </div>
+                    <p class="text-xs mt-1"><span id="p2-hp-text">100</span> HP</p>
+                </div>
+            </div>
+
+            <div id="combat-log" class="w-full flex-grow bg-black/60 border-2 border-stone-800 p-4 mb-4 overflow-y-auto text-sm space-y-1 font-mono"></div>
+
+            <div id="combat-controls" class="w-full grid grid-cols-2 gap-2 pb-4">
+                <button onclick="combatAction('attack')" class="btn-roman py-4">Atacar</button>
+                <button onclick="combatAction('defend')" class="btn-roman py-4">Defender</button>
+            </div>
+
+            <div id="post-battle-controls" class="w-full hidden pb-4">
+                <button onclick="resetGame()" class="btn-roman w-full">Volver al Menú</button>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        const RACES = [
+            { id: 'romano', name: 'Romano', bonus: { hp: 10, atk: 5 } },
+            { id: 'tracio', name: 'Tracio', bonus: { hp: 5, atk: 10 } },
+            { id: 'galo', name: 'Galo', bonus: { hp: 15, atk: 2 } }
+        ];
+        const TRIBES = ["Ecuos", "Sabinos", "Volscos", "Hernicos", "Samnitas"];
+        const NATIONALITIES = ["Roma", "Grecia", "Cartago", "Egipto", "Germania"];
+        const OUTFITS = [
+            { id: 'ligero', name: 'Túnica Ligera', def: 2 },
+            { id: 'cuero', name: 'Cuero Reforzado', def: 5 },
+            { id: 'bronce', name: 'Peto de Bronce', def: 10 },
+            { id: 'lorica', name: 'Lorica Segmentata', def: 15 }
+        ];
+        const WEAPONS = [
+            { id: 'club', name: 'Garrote de Madera', atk: 5, cost: 0, type: 'basic', arena: 'all' },
+            { id: 'dagger', name: 'Daga de Piedra', atk: 8, cost: 10, type: 'basic', arena: 'bosque' },
+            { id: 'spear', name: 'Lanza de Caza', atk: 12, cost: 25, type: 'basic', arena: 'bosque' },
+            { id: 'gladius', name: 'Gladius Romano', atk: 18, cost: 50, type: 'advanced', arena: 'coliseo' },
+            { id: 'spatha', name: 'Spatha de Caballería', atk: 22, cost: 75, type: 'advanced', arena: 'coliseo' },
+            { id: 'trident', name: 'Tridente de Reciario', atk: 25, cost: 100, type: 'advanced', arena: 'arena' }
+        ];
+        const ARENAS = [
+            { id: 'coliseo', name: 'Coliseo de Roma', bg: 'https://images.unsplash.com/photo-1552526879-114bf74ee182?auto=format&fit=crop&q=80&w=1000' },
+            { id: 'bosque', name: 'Frontera de Germania', bg: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&q=80&w=1000' },
+            { id: 'arena', name: 'Arenas de Egipto', bg: 'https://images.unsplash.com/photo-1503177119275-0aa32b3a9368?auto=format&fit=crop&q=80&w=1000' }
+        ];
+
+        let gameMode = 'pve';
+        let currentPlayerIndex = 0;
+        let players = [];
+        let selectedArena = ARENAS[0];
+        let currentTurn = 0; // 0 for P1, 1 for P2
+
+        function createDefaultPlayer(index) {
+            return {
+                id: index,
+                name: `Guerrero ${index + 1}`,
+                race: RACES[0],
+                tribu: TRIBES[0],
+                nacionalidad: NATIONALITIES[0],
+                outfit: OUTFITS[0],
+                hp: 100,
+                maxHp: 100,
+                atk: 10,
+                def: 0,
+                gold: 50,
+                inventory: [],
+                weapon: null,
+                isDefending: false
+            };
+        }
+
+        function setGameMode(mode) {
+            gameMode = mode;
+            players = [createDefaultPlayer(0)];
+            if (mode === 'pvp') {
+                players.push(createDefaultPlayer(1));
+            } else {
+                players.push({
+                    name: 'Marco Aurelio',
+                    hp: 100, maxHp: 100, atk: 12, def: 5, weapon: null, isAI: true
+                });
+            }
+            currentPlayerIndex = 0;
+            showScreen('customization-screen');
+        }
+
+        function initCustomization() {
+            const p = players[currentPlayerIndex];
+            document.getElementById('custom-title').innerText = gameMode === 'pvp' ? `Jugador ${currentPlayerIndex + 1}: Crea tu Guerrero` : 'Crea tu Guerrero';
+            document.getElementById('char-name').value = '';
+
+            const raceContainer = document.getElementById('race-options');
+            raceContainer.innerHTML = '';
+            RACES.forEach(race => {
+                const btn = document.createElement('button');
+                btn.className = 'p-2 border-2 border-stone-600 bg-stone-800 text-xs uppercase font-bold transition-all';
+                btn.innerText = race.name;
+                btn.onclick = () => {
+                    p.race = race;
+                    updateSelectionUI('race-options', btn);
+                };
+                raceContainer.appendChild(btn);
+            });
+            updateSelectionUI('race-options', raceContainer.children[0]);
+
+            const tribuSelect = document.getElementById('tribu-select');
+            tribuSelect.innerHTML = '';
+            TRIBES.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t; opt.innerText = t;
+                tribuSelect.appendChild(opt);
+            });
+
+            const nacSelect = document.getElementById('nacionalidad-select');
+            nacSelect.innerHTML = '';
+            NATIONALITIES.forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = n; opt.innerText = n;
+                nacSelect.appendChild(opt);
+            });
+
+            const outfitContainer = document.getElementById('outfit-options');
+            outfitContainer.innerHTML = '';
+            OUTFITS.forEach(outfit => {
+                const btn = document.createElement('button');
+                btn.className = 'p-2 border-2 border-stone-600 bg-stone-800 text-xs uppercase font-bold transition-all';
+                btn.innerText = outfit.name;
+                btn.onclick = () => {
+                    p.outfit = outfit;
+                    updateSelectionUI('outfit-options', btn);
+                };
+                outfitContainer.appendChild(btn);
+            });
+            updateSelectionUI('outfit-options', outfitContainer.children[0]);
+        }
+
+        function updateSelectionUI(containerId, activeBtn) {
+            document.getElementById(containerId).querySelectorAll('button').forEach(b => {
+                b.classList.remove('border-yellow-500', 'bg-stone-700');
+                b.classList.add('border-stone-600', 'bg-stone-800');
+            });
+            activeBtn.classList.remove('border-stone-600', 'bg-stone-800');
+            activeBtn.classList.add('border-yellow-500', 'bg-stone-700');
+        }
+
+        function handleCustomizationDone() {
+            const nameInput = document.getElementById('char-name');
+            const p = players[currentPlayerIndex];
+            p.name = nameInput.value.trim() || p.name;
+            p.tribu = document.getElementById('tribu-select').value;
+            p.nacionalidad = document.getElementById('nacionalidad-select').value;
+            p.maxHp = 100 + p.race.bonus.hp;
+            p.hp = p.maxHp;
+            p.atk = 10 + p.race.bonus.atk;
+            p.def = p.outfit.def;
+
+            if (gameMode === 'pvp' && currentPlayerIndex === 0) {
+                currentPlayerIndex = 1;
+                initCustomization();
+            } else {
+                showScreen('arena-screen');
+            }
+        }
+
+        function initArenaSelection() {
+            const container = document.getElementById('arena-options');
+            container.innerHTML = '';
+            ARENAS.forEach(arena => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full p-4 border-2 border-stone-600 bg-stone-800 text-left flex justify-between items-center transition-all';
+                btn.innerHTML = `<span class="font-bold cinzel text-lg">${arena.name}</span>`;
+                if (selectedArena.id === arena.id) {
+                    btn.classList.add('border-yellow-500', 'bg-stone-700');
+                }
+                btn.onclick = () => {
+                    selectedArena = arena;
+                    document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('${arena.bg}')`;
+                    initArenaSelection();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function initShop() {
+            const p = players[currentPlayerIndex];
+            document.getElementById('shop-title').innerText = gameMode === 'pvp' ? `Mercado: ${p.name}` : 'Mercado';
+            document.getElementById('player-gold').innerText = p.gold;
+            const basicContainer = document.getElementById('basic-weapons');
+            const advancedContainer = document.getElementById('advanced-weapons');
+            basicContainer.innerHTML = '';
+            advancedContainer.innerHTML = '';
+
+            WEAPONS.forEach(weapon => {
+                if (weapon.arena !== 'all' && weapon.arena !== selectedArena.id) return;
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex justify-between items-center bg-stone-800 p-3 border border-stone-700 mb-1';
+                itemDiv.innerHTML = `<div><span class="block font-bold">${weapon.name}</span><span class="text-xs text-yellow-500">+${weapon.atk} ATK</span></div>`;
+
+                const btn = document.createElement('button');
+                const isOwned = p.inventory.some(i => i.id === weapon.id);
+                const isEquipped = p.weapon && p.weapon.id === weapon.id;
+
+                if (isEquipped) {
+                    btn.className = 'bg-green-700 text-white px-3 py-1 text-xs uppercase font-bold opacity-50';
+                    btn.innerText = 'Equipado';
+                } else if (isOwned) {
+                    btn.className = 'bg-blue-700 text-white px-3 py-1 text-xs uppercase font-bold';
+                    btn.innerText = 'Equipar';
+                    btn.onclick = () => { p.weapon = weapon; initShop(); };
+                } else {
+                    btn.className = `px-3 py-1 text-xs uppercase font-bold ${p.gold >= weapon.cost ? 'bg-yellow-600 text-black' : 'bg-stone-600 text-stone-400 opacity-50'}`;
+                    btn.innerText = weapon.cost === 0 ? 'Gratis' : `${weapon.cost} 💰`;
+                    if (p.gold >= weapon.cost) {
+                        btn.onclick = () => { p.gold -= weapon.cost; p.inventory.push(weapon); p.weapon = weapon; initShop(); };
+                    }
+                }
+                itemDiv.appendChild(btn);
+                if (weapon.type === 'basic') basicContainer.appendChild(itemDiv);
+                else advancedContainer.appendChild(itemDiv);
+            });
+        }
+
+        function handleShopDone() {
+            if (gameMode === 'pvp' && currentPlayerIndex === 0) {
+                currentPlayerIndex = 1;
+                initShop();
+            } else {
+                showScreen('battle-screen');
+            }
+        }
+
+        function initBattle() {
+            if (gameMode === 'pve') {
+                players[1].maxHp = 80 + Math.floor(Math.random() * 40);
+                players[1].hp = players[1].maxHp;
+                players[1].atk = 10 + Math.floor(Math.random() * 8);
+            }
+            currentTurn = 0;
+            document.getElementById('p1-battle-name').innerText = players[0].name;
+            document.getElementById('p2-battle-name').innerText = players[1].name;
+            document.getElementById('combat-log').innerHTML = '<p class="text-stone-400 italic">¡La batalla ha comenzado!</p>';
+            document.getElementById('combat-controls').classList.remove('hidden');
+            document.getElementById('post-battle-controls').classList.add('hidden');
+            updateBattleUI();
+        }
+
+        function updateBattleUI() {
+            const p1 = players[0]; const p2 = players[1];
+            const p1Pct = (p1.hp / p1.maxHp) * 100;
+            const p2Pct = (p2.hp / p2.maxHp) * 100;
+            document.getElementById('p1-hp-bar').style.width = `${Math.max(0, p1Pct)}%`;
+            document.getElementById('p2-hp-bar').style.width = `${Math.max(0, p2Pct)}%`;
+            document.getElementById('p1-hp-text').innerText = Math.ceil(p1.hp);
+            document.getElementById('p2-hp-text').innerText = Math.ceil(p2.hp);
+
+            document.getElementById('p1-battle-name').classList.toggle('text-yellow-500', currentTurn === 0);
+            document.getElementById('p1-battle-name').classList.toggle('text-stone-500', currentTurn !== 0);
+            document.getElementById('p2-battle-name').classList.toggle('text-red-500', currentTurn === 1);
+            document.getElementById('p2-battle-name').classList.toggle('text-stone-500', currentTurn !== 1);
+        }
+
+        function logCombat(msg, color = 'text-white') {
+            const log = document.getElementById('combat-log');
+            log.innerHTML += `<p class="${color}">${msg}</p>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function combatAction(type) {
+            const attacker = players[currentTurn];
+            const defender = players[1 - currentTurn];
+
+            if (type === 'attack') {
+                const baseAtk = attacker.atk + (attacker.weapon ? attacker.weapon.atk : 0);
+                const crit = Math.random() < 0.15 ? 1.5 : 1;
+                let dmg = (baseAtk * crit) - (defender.def * (defender.isDefending ? 1.5 : 0.5));
+                dmg = Math.max(2, Math.floor(dmg));
+                defender.hp -= dmg;
+                logCombat(`${attacker.name} ataca y causa ${dmg} de daño${crit > 1 ? ' ¡CRÍTICO!' : ''}.`, currentTurn === 0 ? 'text-yellow-400' : 'text-red-400');
+                triggerShake(currentTurn === 0 ? 'p2-battle-name' : 'p1-battle-name');
+            } else {
+                attacker.isDefending = true;
+                logCombat(`${attacker.name} se defiende.`, 'text-blue-400');
+            }
+
+            if (defender.hp <= 0) {
+                endBattle(attacker);
+            } else {
+                currentTurn = 1 - currentTurn;
+                defender.isDefending = false;
+                updateBattleUI();
+                if (gameMode === 'pve' && currentTurn === 1) aiTurn();
+            }
+        }
+
+        function aiTurn() {
+            document.getElementById('combat-controls').style.pointerEvents = 'none';
+            setTimeout(() => {
+                combatAction(Math.random() < 0.8 ? 'attack' : 'defend');
+                document.getElementById('combat-controls').style.pointerEvents = 'auto';
+            }, 1000);
+        }
+
+        function endBattle(winner) {
+            updateBattleUI();
+            document.getElementById('combat-controls').classList.add('hidden');
+            document.getElementById('post-battle-controls').classList.remove('hidden');
+            logCombat(`¡VICTORIA PARA ${winner.name.toUpperCase()}!`, 'text-green-500 font-bold text-lg');
+        }
+
+        function triggerShake(id) {
+            const el = document.getElementById(id);
+            el.classList.add('shake');
+            setTimeout(() => el.classList.remove('shake'), 500);
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); s.style.display = 'none'; });
+            const target = document.getElementById(screenId);
+            target.style.display = 'flex';
+            setTimeout(() => target.classList.add('active'), 10);
+            if (screenId === 'customization-screen') initCustomization();
+            else if (screenId === 'arena-screen') initArenaSelection();
+            else if (screenId === 'shop-screen') { currentPlayerIndex = 0; initShop(); }
+            else if (screenId === 'battle-screen') initBattle();
+        }
+
+        function resetGame() { showScreen('menu-screen'); }
+    </script>
+</body>
+</html>
