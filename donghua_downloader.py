@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.0.6"
+VERSION = "1.0.7"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -134,16 +134,21 @@ class DonghuaDownloader:
 
     def extract_episodes(self, soup, base_url):
         episodes = []
+
+        # Intentar limitar la búsqueda al contenido principal para evitar "Más populares" o "Más vistos"
+        main_content = soup.find(id="main-content") or soup.find("main") or soup.find("article") or soup
+
         # Buscar enlaces de episodios
-        links = soup.find_all('a', href=re.compile(r'episodio|episode|capitulo|cap-\d+|/episode/'))
+        links = main_content.find_all('a', href=re.compile(r'episodio|episode|capitulo|cap-\d+|/episode/'))
 
         selectors = [
             '.episodes-list a', '.list-episodes a', '.ep-list a',
-            '#episode-list a', '.item-episode a', '.views-field-title a'
+            '#episode-list a', '.item-episode a', '.views-field-title a',
+            '.views-table a'
         ]
         for sel in selectors:
             try:
-                links.extend(soup.select(sel))
+                links.extend(main_content.select(sel))
             except:
                 continue
 
@@ -312,13 +317,18 @@ class DonghuaDownloader:
                 print("Error: No se encontraron episodios en esta sección.")
                 return
 
-            print(f"Rango de episodios: {episodes[0]['number']} al {episodes[-1]['number']}")
+            # Asegurar que el rango mostrado sea amigable
+            min_ep = min(e['number'] for e in episodes)
+            max_ep = max(e['number'] for e in episodes)
+
+            print(f"Episodios encontrados: {len(episodes)}")
+            print(f"Rango disponible: {min_ep} al {max_ep}")
 
             try:
-                start_ep = int(input(f"Episodio inicial [{episodes[0]['number']}]: ") or episodes[0]['number'])
-                end_ep = int(input(f"Episodio final [{episodes[-1]['number']}]: ") or episodes[-1]['number'])
+                start_ep = int(input(f"Episodio inicial [1]: ") or "1")
+                end_ep = int(input(f"Episodio final [{max_ep}]: ") or str(max_ep))
             except:
-                start_ep, end_ep = episodes[0]['number'], episodes[-1]['number']
+                start_ep, end_ep = 1, max_ep
 
             to_download = [ep for ep in episodes if start_ep <= ep['number'] <= end_ep]
             if not to_download:
