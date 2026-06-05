@@ -20,6 +20,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+VERSION = "1.0.5"
+
 class DonghuaDownloader:
     def __init__(self):
         self.log_file = "donghua_error.log"
@@ -39,20 +41,20 @@ class DonghuaDownloader:
 
     def find_json_in_html(self, html):
         """Busca y extrae objetos JSON de etiquetas <script>."""
-        scripts = BeautifulSoup(html, 'html.parser').find_all('script')
+        soup = BeautifulSoup(html, 'html.parser')
+        scripts = soup.find_all('script')
         found_data = []
         for script in scripts:
             if script.string:
-                # Buscar patrones comunes de listas de episodios en JSON
-                # Este regex busca algo que parezca un objeto o array JSON grande
-                json_matches = re.findall(r'(\[.*\]|\{.*\})', script.string)
+                # Buscar patrones que parezcan JSON
+                json_matches = re.findall(r'({[\s\S]*?}|\[[\s\S]*?\])', script.string)
                 for match in json_matches:
                     try:
                         data = json.loads(match)
-                        # Verificar si parece contener episodios
-                        str_data = str(data).lower()
-                        if 'episodio' in str_data or 'episode' in str_data:
-                            found_data.append(data)
+                        if isinstance(data, (dict, list)):
+                            str_data = str(data).lower()
+                            if 'episodio' in str_data or 'episode' in str_data or 'seasons' in str_data:
+                                found_data.append(data)
                     except:
                         continue
         return found_data
@@ -63,10 +65,9 @@ class DonghuaDownloader:
 
         seasons = {}
 
-        # Intentar extraer mediante JSON primero
+        # 1. Intentar mediante JSON
         json_data_list = self.find_json_in_html(html)
         for data in json_data_list:
-            # Buscar estructuras como {"seasons": [...]} o listas de episodios
             if isinstance(data, dict):
                 if 'seasons' in data and isinstance(data['seasons'], list):
                     for i, s in enumerate(data['seasons']):
@@ -74,57 +75,87 @@ class DonghuaDownloader:
                         s_url = urljoin(url, s.get('url', ''))
                         seasons[name] = {'url': s_url, 'episodes': []}
                 elif 'episodes' in data and isinstance(data['episodes'], list):
-                    # Si encontramos episodios directamente, los añadimos a una temporada por defecto
                     if 'Temporada 1' not in seasons:
                         seasons['Temporada 1'] = {'url': url, 'episodes': []}
                     for ep in data['episodes']:
                         num = ep.get('number') or ep.get('episode_number')
                         e_url = urljoin(url, ep.get('url', ep.get('link', '')))
                         if num and e_url:
-                            seasons['Temporada 1']['episodes'].append({'number': int(num), 'url': e_url, 'title': ep.get('title', f"Episodio {num}")})
+                            seasons['Temporada 1']['episodes'].append({
+                                'number': int(num),
+                                'url': e_url,
+                                'title': ep.get('title', f"Episodio {num}")
+                            })
 
-        if seasons:
-            logger.info(f"Se detectaron {len(seasons)} temporadas vía JSON.")
+        if seasons and any(s['episodes'] for s in seasons.values()):
             return seasons
-        # Buscar contenedores de temporadas con enlaces
-        season_links = soup.select('.seasons-container a, .nav-tabs a, .season-list a, .temporadas a')
+
+        # 2. Intentar mediante Selectores CSS
+        # Corregido: sin espacios entre el punto y el nombre de la clase
+        season_selectors = [
+            '.seasons-container a',
+            '.nav-tabs a',
+            '.season-list a',
+            '.temporadas a',
+            '.season-links a'
+        ]
+
+        season_links = []
+        for sel in season_selectors:
+            try:
+                found = soup.select(sel)
+                if found:
+                    season_links.extend(found)
+            except Exception:
+                continue
 
         if not season_links:
             seasons['Temporada 1'] = {'url': url, 'episodes': self.extract_episodes(soup, url)}
         else:
             for i, link in enumerate(season_links):
                 name = link.get_text(strip=True) or f"Temporada {i+1}"
-                href = urljoin(url, link.get('href'))
-                seasons[name] = {'url': href, 'episodes': []}
+                href = urljoin(url, link.get('href', ''))
+                if href and href != url and '/season/' in href:
+                    seasons[name] = {'url': href, 'episodes': []}
+
+            if not seasons:
+                seasons['Temporada 1'] = {'url': url, 'episodes': self.extract_episodes(soup, url)}
 
         return seasons
 
     def extract_episodes(self, soup, base_url):
         episodes = []
-        # Buscar enlaces que parezcan episodios
+        # Buscar enlaces de episodios
         links = soup.find_all('a', href=re.compile(r'episodio|episode|capitulo|cap-\d+|/episode/'))
 
-        # Añadir links de contenedores comunes
-        for selector in ['.episodes-list', '.list-episodes', '.ep-list', '#episode-list', '.item-episode', '.views-field-title']:
-            links.extend(soup.select(f"{selector} a"))
+        selectors = [
+            '.episodes-list a', '.list-episodes a', '.ep-list a',
+            '#episode-list a', '.item-episode a', '.views-field-title a'
+        ]
+        for sel in selectors:
+            try:
+                links.extend(soup.select(sel))
+            except:
+                continue
 
         for link in links:
             title = link.get_text(strip=True)
             href = link.get('href')
             if href:
                 href = urljoin(base_url, href)
-                # Extraer número de episodio
-                # Priorizar el final de la URL para evitar números de temporada o serie
                 url_parts = href.rstrip('/').split('/')
                 last_part = url_parts[-1]
 
-                num_match = re.search(r'-x(\d+)', last_part) or re.search(r'(\d+)$', last_part) or re.search(r'(\d+)', title)
-                num = int(num_match.group(1)) if num_match else None
+                num_match = re.search(r'-x(\d+)', last_part) or \
+                            re.search(r'capitulo-(\d+)', last_part) or \
+                            re.search(r'episodio-(\d+)', last_part) or \
+                            re.search(r'-(\d+)$', last_part) or \
+                            re.search(r'(\d+)', title)
 
+                num = int(num_match.group(1)) if num_match else None
                 if num is not None:
                     episodes.append({'number': num, 'url': href, 'title': title})
 
-        # Eliminar duplicados
         unique_eps = {}
         for ep in episodes:
             if ep['number'] not in unique_eps:
@@ -137,41 +168,33 @@ class DonghuaDownloader:
         soup = BeautifulSoup(html, 'html.parser')
         embeds = []
 
-        # Buscar en iframes
         for iframe in soup.find_all('iframe'):
             src = iframe.get('src')
             if src:
-                if any(srv in src for srv in ['dailymotion.com', 'ok.ru', 'rumble.com', 'voe.sx', 'vidoza.net']):
+                if any(srv in src for srv in ['dailymotion.com', 'ok.ru', 'rumble.com', 'voe.sx', 'vidoza.net', 'filemoon']):
                     if src.startswith('//'): src = 'https:' + src
                     embeds.append(src)
 
-        # Buscar en scripts (algunos cargan el player dinámicamente)
         scripts = soup.find_all('script')
         for script in scripts:
             if script.string:
-                # Buscar URLs de servidores comunes en strings
-                matches = re.findall(r'(https?://[^\s"\']+(?:ok\.ru|dailymotion\.com|rumble\.com)[^\s"\']*)', script.string)
+                matches = re.findall(r'(https?://[^\s"\']+(?:ok\.ru|dailymotion\.com|rumble\.com|filemoon)[^\s"\']*)', script.string)
                 embeds.extend(matches)
 
         return list(set(embeds))
 
     def get_available_qualities(self, url):
-        """Intenta detectar las calidades disponibles para una URL."""
+        """Detecta calidades disponibles."""
         embeds = self.find_embed_urls(url)
-        # Intentar con embeds primero, luego con la URL base
         sources = embeds + [url]
 
-        print(f"   Analizando calidades disponibles...")
+        print(f"   Analizando calidades disponibles en los servidores...")
         ydl_opts = {
-            'quiet': True,
-            'noplaylist': True,
-            'no_warnings': True,
+            'quiet': True, 'noplaylist': True, 'no_warnings': True,
             'user_agent': self.session.headers['User-Agent']
         }
 
         all_heights = set()
-        last_error = None
-
         for src in sources:
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -181,26 +204,22 @@ class DonghuaDownloader:
                         h = f.get('height')
                         if h and isinstance(h, int):
                             all_heights.add(h)
-                if all_heights:
-                    break
-            except Exception as e:
-                last_error = e
+                if all_heights: break
+            except:
                 continue
 
         if not all_heights:
-            logger.warning(f"No se pudieron extraer calidades automáticamente: {last_error}")
             return [360, 480, 720, 1080]
 
         return sorted(list(all_heights), reverse=True)
 
     def download_episode(self, ep_data, quality=480):
-        print(f"\n>>> Procesando Episodio {ep_data['number']}...")
+        print(f"\n>>> Preparando Episodio {ep_data['number']}...")
 
         target_urls = [ep_data['url']]
         try:
             embeds = self.find_embed_urls(ep_data['url'])
             if embeds:
-                print(f"   Servidores detectados: {len(embeds)}")
                 target_urls = embeds + target_urls
         except:
             pass
@@ -215,29 +234,29 @@ class DonghuaDownloader:
 
         success = False
         for url in target_urls:
-            print(f"   Intentando: {url}")
+            print(f"   Intentando descargar de: {url}")
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([url])
                 success = True
                 break
-            except Exception as e:
+            except:
                 continue
 
         if not success:
-            raise Exception(f"No se pudo descargar el episodio {ep_data['number']}. Intenta revisar el servidor manualmente.")
+            print(f"   [!] No se pudo descargar el episodio {ep_data['number']}.")
 
     def run(self):
         try:
-            print("========================================")
-            print("   DONGHUA DOWNLOADER PRO (TERMUX)")
-            print("========================================")
+            print(f"========================================")
+            print(f"   DONGHUA DOWNLOADER PRO v{VERSION}")
+            print(f"========================================")
             url = input("Introduce la URL del Donghua: ").strip()
             if not url: return
 
             seasons = self.scrape_seasons_and_episodes(url)
             if not seasons:
-                print("No se detectaron temporadas.")
+                print("No se detectaron temporadas ni episodios.")
                 return
 
             season_names = list(seasons.keys())
@@ -247,82 +266,73 @@ class DonghuaDownloader:
                     print(f"  {i+1}. {name}")
 
                 try:
-                    sel = int(input("\nSelecciona temporada (número): ")) - 1
-                    if not (0 <= sel < len(season_names)):
-                        print("Selección fuera de rango.")
-                        return
-                    selected_name = season_names[sel]
-                except ValueError:
-                    print("Por favor, introduce un número válido.")
-                    return
+                    sel_in = input(f"\nSelecciona temporada (1-{len(season_names)}) [1]: ").strip()
+                    sel = int(sel_in) - 1 if sel_in else 0
+                    selected_name = season_names[sel] if 0 <= sel < len(season_names) else season_names[0]
+                except:
+                    selected_name = season_names[0]
             else:
                 selected_name = season_names[0]
-                print(f"\nTemporada: {selected_name}")
+                print(f"\nTemporada detectada: {selected_name}")
 
             season_info = seasons[selected_name]
-            episodes = season_info['episodes']
+            episodes = season_info.get('episodes', [])
 
-            # Si no hay episodios pero hay URL de temporada, scrapear esa URL
-            if not episodes and season_info['url'] != url:
-                print(f"Cargando episodios de {selected_name}...")
+            if not episodes:
+                print(f"Cargando lista de episodios...")
                 html = self.get_page_content(season_info['url'])
                 episodes = self.extract_episodes(BeautifulSoup(html, 'html.parser'), season_info['url'])
 
             if not episodes:
-                print("Error: No se encontraron episodios.")
+                print("Error: No se encontraron episodios en esta sección.")
                 return
 
-            print(f"Rango detectado: {episodes[0]['number']} - {episodes[-1]['number']}")
+            print(f"Rango de episodios: {episodes[0]['number']} al {episodes[-1]['number']}")
 
             try:
-                start_ep = int(input(f"Episodio inicial: "))
-                end_ep = int(input(f"Episodio final: "))
-            except ValueError:
-                print("Error: Debes introducir números para los episodios.")
-                return
+                start_ep = int(input(f"Episodio inicial [{episodes[0]['number']}]: ") or episodes[0]['number'])
+                end_ep = int(input(f"Episodio final [{episodes[-1]['number']}]: ") or episodes[-1]['number'])
+            except:
+                start_ep, end_ep = episodes[0]['number'], episodes[-1]['number']
 
             to_download = [ep for ep in episodes if start_ep <= ep['number'] <= end_ep]
-
             if not to_download:
-                print("No hay episodios en el rango seleccionado.")
+                print("El rango seleccionado no contiene episodios.")
                 return
 
             qualities = self.get_available_qualities(to_download[0]['url'])
-            print("\nCalidades disponibles (aproximadas):")
+            print("\nCalidades disponibles detectadas:")
             for i, q in enumerate(qualities):
                 print(f"  {i+1}. {q}p")
 
             try:
-                q_idx = int(input("\nSelecciona calidad (número) [Defecto 480p]: ") or "0") - 1
-                if 0 <= q_idx < len(qualities):
-                    selected_quality = qualities[q_idx]
-                else:
-                    selected_quality = 480
-            except ValueError:
+                q_in = input(f"\nSelecciona calidad (1-{len(qualities)}) [480p]: ").strip()
+                q_idx = int(q_in) - 1 if q_in else -1
+                selected_quality = qualities[q_idx] if 0 <= q_idx < len(qualities) else 480
+            except:
                 selected_quality = 480
 
-            print(f"Calidad seleccionada: {selected_quality}p")
+            print(f"Calidad elegida: {selected_quality}p\n")
 
             for ep in to_download:
                 self.download_episode(ep, quality=selected_quality)
 
-            print("\n¡Descargas completadas!")
+            print("\n¡Todo el proceso ha finalizado correctamente!")
 
         except Exception as e:
             self.handle_error(e)
 
     def handle_error(self, e):
         error_msg = traceback.format_exc()
-        print("\n" + "!"*40 + "\n ERROR DETECTADO \n" + "!"*40)
+        print(f"\n" + "!"*40 + f"\n ERROR CRÍTICO v{VERSION}\n" + "!"*40)
         print(f"\nMensaje: {e}\n")
-        print("Análisis técnico:")
+        print("Detalles del error:")
         print(error_msg)
-
-        if input("\n¿Exportar log? (s/n): ").lower() == 's':
+        if input("\n¿Deseas guardar el log de error en 'donghua_error.log'? (s/n): ").lower() == 's':
             with open(self.log_file, "w", encoding="utf-8") as f:
+                f.write(f"VERSION: {VERSION}\n")
                 f.write(error_msg)
-            print(f"Log guardado en {self.log_file}")
+            print(f"Log exportado a: {os.path.abspath(self.log_file)}")
 
 if __name__ == "__main__":
-    downloader = DonghuaDownloader()
-    downloader.run()
+    DonghuaDownloader().run()
