@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.0.5"
+VERSION = "1.0.6"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -30,14 +30,23 @@ class DonghuaDownloader:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
 
-    def get_page_content(self, url):
-        try:
-            response = self.session.get(url, timeout=15)
-            response.raise_for_status()
-            return response.text
-        except Exception as e:
-            logger.error(f"Error al acceder a {url}: {e}")
-            raise
+    def get_page_content(self, url, retries=3):
+        for i in range(retries):
+            try:
+                response = self.session.get(url, timeout=20)
+                response.raise_for_status()
+                return response.text
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                if i < retries - 1:
+                    logger.warning(f"Reintentando {url} ({i+1}/{retries}) por error de conexión: {e}")
+                    import time
+                    time.sleep(2)
+                    continue
+                logger.error(f"Error fatal al acceder a {url} después de {retries} intentos.")
+                raise
+            except Exception as e:
+                logger.error(f"Error al acceder a {url}: {e}")
+                raise
 
     def find_json_in_html(self, html):
         """Busca y extrae objetos JSON de etiquetas <script>."""
@@ -168,17 +177,26 @@ class DonghuaDownloader:
         soup = BeautifulSoup(html, 'html.parser')
         embeds = []
 
+        # Servidores comunes a buscar
+        server_patterns = [
+            'dailymotion.com', 'ok.ru', 'rumble.com', 'voe.sx', 'vidoza.net',
+            'filemoon', 'streamwish', 'vidhide', 'filelions', 'streamtape',
+            'mp4upload', 'doodstream', 'mixdrop'
+        ]
+
         for iframe in soup.find_all('iframe'):
             src = iframe.get('src')
             if src:
-                if any(srv in src for srv in ['dailymotion.com', 'ok.ru', 'rumble.com', 'voe.sx', 'vidoza.net', 'filemoon']):
+                if any(srv in src.lower() for srv in server_patterns):
                     if src.startswith('//'): src = 'https:' + src
                     embeds.append(src)
 
         scripts = soup.find_all('script')
         for script in scripts:
             if script.string:
-                matches = re.findall(r'(https?://[^\s"\']+(?:ok\.ru|dailymotion\.com|rumble\.com|filemoon)[^\s"\']*)', script.string)
+                # Regex más amplia para capturar URLs de servidores
+                pattern = r'(https?://[^\s"\']+(?:' + '|'.join(server_patterns).replace('.', r'\.') + r')[^\s"\']*)'
+                matches = re.findall(pattern, script.string, re.IGNORECASE)
                 embeds.extend(matches)
 
         return list(set(embeds))
@@ -191,7 +209,8 @@ class DonghuaDownloader:
         print(f"   Analizando calidades disponibles en los servidores...")
         ydl_opts = {
             'quiet': True, 'noplaylist': True, 'no_warnings': True,
-            'user_agent': self.session.headers['User-Agent']
+            'user_agent': self.session.headers['User-Agent'],
+            'check_formats': True
         }
 
         all_heights = set()
@@ -201,8 +220,11 @@ class DonghuaDownloader:
                     info = ydl.extract_info(src, download=False)
                     formats = info.get('formats', [])
                     for f in formats:
+                        # Filtrar formatos auxiliares como timeline/storyboard de Rumble
+                        if 'timeline' in f.get('format_id', '').lower() or 'storyboard' in f.get('format_id', '').lower():
+                            continue
                         h = f.get('height')
-                        if h and isinstance(h, int):
+                        if h and isinstance(h, int) and h > 100:
                             all_heights.add(h)
                 if all_heights: break
             except:
@@ -225,11 +247,14 @@ class DonghuaDownloader:
             pass
 
         ydl_opts = {
-            'format': f'bestvideo[height<={quality}]+bestaudio/best[height<={quality}]',
+            # Selecciona la mejor calidad menor o igual a la solicitada
+            'format': f'bestvideo[height<={quality}][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<={quality}]/best',
             'outtmpl': f'Donghua_Ep_{ep_data["number"]}.%(ext)s',
             'noplaylist': True,
-            'format_sort': [f'res:{quality}', 'ext:mp4:m4a'],
+            'format_sort': [f'res:{quality}', 'vcodec:h264', 'ext:mp4:m4a'],
             'merge_output_format': 'mp4',
+            'user_agent': self.session.headers['User-Agent'],
+            'no_warnings': True,
         }
 
         success = False
