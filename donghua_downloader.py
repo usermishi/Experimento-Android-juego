@@ -61,16 +61,33 @@ class DonghuaDownloader:
         html = self.get_page_content(url)
         soup = BeautifulSoup(html, 'html.parser')
 
+        seasons = {}
+
         # Intentar extraer mediante JSON primero
         json_data_list = self.find_json_in_html(html)
-        if json_data_list:
-            logger.info("Se detectaron datos JSON en la página. Intentando procesar...")
-            # Aquí se podría implementar una lógica más específica si se conoce el formato
-            # Por ahora, seguimos con el scraping de HTML como respaldo robusto
+        for data in json_data_list:
+            # Buscar estructuras como {"seasons": [...]} o listas de episodios
+            if isinstance(data, dict):
+                if 'seasons' in data and isinstance(data['seasons'], list):
+                    for i, s in enumerate(data['seasons']):
+                        name = s.get('name', f"Temporada {i+1}")
+                        s_url = urljoin(url, s.get('url', ''))
+                        seasons[name] = {'url': s_url, 'episodes': []}
+                elif 'episodes' in data and isinstance(data['episodes'], list):
+                    # Si encontramos episodios directamente, los añadimos a una temporada por defecto
+                    if 'Temporada 1' not in seasons:
+                        seasons['Temporada 1'] = {'url': url, 'episodes': []}
+                    for ep in data['episodes']:
+                        num = ep.get('number') or ep.get('episode_number')
+                        e_url = urljoin(url, ep.get('url', ep.get('link', '')))
+                        if num and e_url:
+                            seasons['Temporada 1']['episodes'].append({'number': int(num), 'url': e_url, 'title': ep.get('title', f"Episodio {num}")})
 
-        seasons = {}
+        if seasons:
+            logger.info(f"Se detectaron {len(seasons)} temporadas vía JSON.")
+            return seasons
         # Buscar contenedores de temporadas con enlaces
-        season_links = soup.select('.seasons-container a, .nav-tabs a, .season-list a, . temporadas a')
+        season_links = soup.select('.seasons-container a, .nav-tabs a, .season-list a, .temporadas a')
 
         if not season_links:
             seasons['Temporada 1'] = {'url': url, 'episodes': self.extract_episodes(soup, url)}
@@ -85,10 +102,10 @@ class DonghuaDownloader:
     def extract_episodes(self, soup, base_url):
         episodes = []
         # Buscar enlaces que parezcan episodios
-        links = soup.find_all('a', href=re.compile(r'episodio|episode|capitulo|cap-\d+'))
+        links = soup.find_all('a', href=re.compile(r'episodio|episode|capitulo|cap-\d+|/episode/'))
 
         # Añadir links de contenedores comunes
-        for selector in ['.episodes-list', '.list-episodes', '.ep-list', '#episode-list', '.item-episode']:
+        for selector in ['.episodes-list', '.list-episodes', '.ep-list', '#episode-list', '.item-episode', '.views-field-title']:
             links.extend(soup.select(f"{selector} a"))
 
         for link in links:
@@ -97,7 +114,11 @@ class DonghuaDownloader:
             if href:
                 href = urljoin(base_url, href)
                 # Extraer número de episodio
-                num_match = re.search(r'(\d+)', title) or re.search(r'(\d+)', href.rstrip('/').split('/')[-1])
+                # Priorizar el final de la URL para evitar números de temporada o serie
+                url_parts = href.rstrip('/').split('/')
+                last_part = url_parts[-1]
+
+                num_match = re.search(r'-x(\d+)', last_part) or re.search(r'(\d+)$', last_part) or re.search(r'(\d+)', title)
                 num = int(num_match.group(1)) if num_match else None
 
                 if num is not None:
@@ -186,8 +207,16 @@ class DonghuaDownloader:
                 print("\nTemporadas encontradas:")
                 for i, name in enumerate(season_names):
                     print(f"  {i+1}. {name}")
-                sel = int(input("\nSelecciona temporada: ")) - 1
-                selected_name = season_names[sel]
+
+                try:
+                    sel = int(input("\nSelecciona temporada (número): ")) - 1
+                    if not (0 <= sel < len(season_names)):
+                        print("Selección fuera de rango.")
+                        return
+                    selected_name = season_names[sel]
+                except ValueError:
+                    print("Por favor, introduce un número válido.")
+                    return
             else:
                 selected_name = season_names[0]
                 print(f"\nTemporada: {selected_name}")
@@ -207,8 +236,12 @@ class DonghuaDownloader:
 
             print(f"Rango detectado: {episodes[0]['number']} - {episodes[-1]['number']}")
 
-            start_ep = int(input(f"Episodio inicial: "))
-            end_ep = int(input(f"Episodio final: "))
+            try:
+                start_ep = int(input(f"Episodio inicial: "))
+                end_ep = int(input(f"Episodio final: "))
+            except ValueError:
+                print("Error: Debes introducir números para los episodios.")
+                return
 
             to_download = [ep for ep in episodes if start_ep <= ep['number'] <= end_ep]
 
