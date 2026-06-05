@@ -158,22 +158,40 @@ class DonghuaDownloader:
     def get_available_qualities(self, url):
         """Intenta detectar las calidades disponibles para una URL."""
         embeds = self.find_embed_urls(url)
-        target_url = embeds[0] if embeds else url
+        # Intentar con embeds primero, luego con la URL base
+        sources = embeds + [url]
 
         print(f"   Analizando calidades disponibles...")
-        ydl_opts = {'quiet': True, 'noplaylist': True}
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(target_url, download=False)
-                formats = info.get('formats', [])
-                heights = set()
-                for f in formats:
-                    h = f.get('height')
-                    if h:
-                        heights.add(h)
-                return sorted(list(heights), reverse=True)
-        except:
-            return [480, 720, 1080] # Fallback por si falla la extracción
+        ydl_opts = {
+            'quiet': True,
+            'noplaylist': True,
+            'no_warnings': True,
+            'user_agent': self.session.headers['User-Agent']
+        }
+
+        all_heights = set()
+        last_error = None
+
+        for src in sources:
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(src, download=False)
+                    formats = info.get('formats', [])
+                    for f in formats:
+                        h = f.get('height')
+                        if h and isinstance(h, int):
+                            all_heights.add(h)
+                if all_heights:
+                    break
+            except Exception as e:
+                last_error = e
+                continue
+
+        if not all_heights:
+            logger.warning(f"No se pudieron extraer calidades automáticamente: {last_error}")
+            return [360, 480, 720, 1080]
+
+        return sorted(list(all_heights), reverse=True)
 
     def download_episode(self, ep_data, quality=480):
         print(f"\n>>> Procesando Episodio {ep_data['number']}...")
