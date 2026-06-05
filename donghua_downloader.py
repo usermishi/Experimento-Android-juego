@@ -155,7 +155,27 @@ class DonghuaDownloader:
 
         return list(set(embeds))
 
-    def download_episode(self, ep_data):
+    def get_available_qualities(self, url):
+        """Intenta detectar las calidades disponibles para una URL."""
+        embeds = self.find_embed_urls(url)
+        target_url = embeds[0] if embeds else url
+
+        print(f"   Analizando calidades disponibles...")
+        ydl_opts = {'quiet': True, 'noplaylist': True}
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(target_url, download=False)
+                formats = info.get('formats', [])
+                heights = set()
+                for f in formats:
+                    h = f.get('height')
+                    if h:
+                        heights.add(h)
+                return sorted(list(heights), reverse=True)
+        except:
+            return [480, 720, 1080] # Fallback por si falla la extracción
+
+    def download_episode(self, ep_data, quality=480):
         print(f"\n>>> Procesando Episodio {ep_data['number']}...")
 
         target_urls = [ep_data['url']]
@@ -168,10 +188,10 @@ class DonghuaDownloader:
             pass
 
         ydl_opts = {
-            'format': 'bestvideo[height<=480]+bestaudio/best[height<=480]',
+            'format': f'bestvideo[height<={quality}]+bestaudio/best[height<={quality}]',
             'outtmpl': f'Donghua_Ep_{ep_data["number"]}.%(ext)s',
             'noplaylist': True,
-            'format_sort': ['res:480', 'ext:mp4:m4a'],
+            'format_sort': [f'res:{quality}', 'ext:mp4:m4a'],
             'merge_output_format': 'mp4',
         }
 
@@ -245,8 +265,28 @@ class DonghuaDownloader:
 
             to_download = [ep for ep in episodes if start_ep <= ep['number'] <= end_ep]
 
+            if not to_download:
+                print("No hay episodios en el rango seleccionado.")
+                return
+
+            qualities = self.get_available_qualities(to_download[0]['url'])
+            print("\nCalidades disponibles (aproximadas):")
+            for i, q in enumerate(qualities):
+                print(f"  {i+1}. {q}p")
+
+            try:
+                q_idx = int(input("\nSelecciona calidad (número) [Defecto 480p]: ") or "0") - 1
+                if 0 <= q_idx < len(qualities):
+                    selected_quality = qualities[q_idx]
+                else:
+                    selected_quality = 480
+            except ValueError:
+                selected_quality = 480
+
+            print(f"Calidad seleccionada: {selected_quality}p")
+
             for ep in to_download:
-                self.download_episode(ep)
+                self.download_episode(ep, quality=selected_quality)
 
             print("\n¡Descargas completadas!")
 
