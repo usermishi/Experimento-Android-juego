@@ -20,11 +20,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.0.7"
+VERSION = "1.0.8"
 
 class DonghuaDownloader:
     def __init__(self):
         self.log_file = "donghua_error.log"
+        self.series_name = "Donghua"
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -68,8 +69,9 @@ class DonghuaDownloader:
                         continue
         return found_data
 
-    def scrape_seasons_and_episodes(self, url):
-        html = self.get_page_content(url)
+    def scrape_seasons_and_episodes(self, url, html=None):
+        if not html:
+            html = self.get_page_content(url)
         soup = BeautifulSoup(html, 'html.parser')
 
         seasons = {}
@@ -240,6 +242,10 @@ class DonghuaDownloader:
 
         return sorted(list(all_heights), reverse=True)
 
+    def sanitize_filename(self, name):
+        """Limpia el nombre para que sea un nombre de archivo válido."""
+        return re.sub(r'[\\/*?:"<>|]', "", name).replace(" ", "_")
+
     def download_episode(self, ep_data, quality=480):
         print(f"\n>>> Preparando Episodio {ep_data['number']}...")
 
@@ -251,10 +257,13 @@ class DonghuaDownloader:
         except:
             pass
 
+        # Usar el nombre de la serie en el archivo
+        filename = f"{self.series_name}_Ep_{ep_data['number']}.%(ext)s"
+
         ydl_opts = {
             # Selecciona la mejor calidad menor o igual a la solicitada
             'format': f'bestvideo[height<={quality}][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<={quality}]/best',
-            'outtmpl': f'Donghua_Ep_{ep_data["number"]}.%(ext)s',
+            'outtmpl': filename,
             'noplaylist': True,
             'format_sort': [f'res:{quality}', 'vcodec:h264', 'ext:mp4:m4a'],
             'merge_output_format': 'mp4',
@@ -284,7 +293,22 @@ class DonghuaDownloader:
             url = input("Introduce la URL del Donghua: ").strip()
             if not url: return
 
-            seasons = self.scrape_seasons_and_episodes(url)
+            html = self.get_page_content(url)
+            soup = BeautifulSoup(html, 'html.parser')
+
+            # Intentar extraer el nombre de la serie
+            h1 = soup.find('h1')
+            if h1:
+                self.series_name = self.sanitize_filename(h1.get_text(strip=True))
+            else:
+                title_tag = soup.find('title')
+                if title_tag:
+                    raw_title = title_tag.get_text(strip=True).split('|')[0].split('-')[0]
+                    self.series_name = self.sanitize_filename(raw_title)
+
+            print(f"Serie: {self.series_name}")
+
+            seasons = self.scrape_seasons_and_episodes(url, html=html)
             if not seasons:
                 print("No se detectaron temporadas ni episodios.")
                 return
