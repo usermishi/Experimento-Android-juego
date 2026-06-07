@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.1.4"
+VERSION = "1.1.5"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -102,13 +102,14 @@ class DonghuaDownloader:
             return seasons
 
         # 2. Intentar mediante Selectores CSS
-        # Corregido: sin espacios entre el punto y el nombre de la clase
         season_selectors = [
             '.seasons-container a',
             '.nav-tabs a',
             '.season-list a',
             '.temporadas a',
-            '.season-links a'
+            '.season-links a',
+            '.field--name-field-temporada a',
+            '.field--name-field-series a'
         ]
 
         season_links = []
@@ -126,7 +127,7 @@ class DonghuaDownloader:
             for i, link in enumerate(season_links):
                 name = link.get_text(strip=True) or f"Temporada {i+1}"
                 href = urljoin(url, link.get('href', ''))
-                if href and href != url and '/season/' in href:
+                if href and href != url and ('/season/' in href or '/series/' in href):
                     seasons[name] = {'url': href, 'episodes': []}
 
             if not seasons:
@@ -166,7 +167,12 @@ class DonghuaDownloader:
         ]
         for sel in selectors:
             try:
-                links.extend(main_content.select(sel))
+                found_links = main_content.select(sel)
+                for fl in found_links:
+                    href = fl.get('href', '')
+                    if (base_slug in href or current_slug in href) and '/series/' not in href and '/season/' not in href:
+                        if fl not in links:
+                            links.append(fl)
             except:
                 continue
 
@@ -421,17 +427,42 @@ class DonghuaDownloader:
 
             to_download = [ep for ep in episodes if start_ep <= ep['number'] <= end_ep]
 
-            # Diagnóstico detallado si fallan episodios
+            # MODO BRUTAL: Si faltan episodios, buscar en otras temporadas automáticamente
+            if len(to_download) < (end_ep - start_ep + 1) and len(season_names) > 1:
+                print("\n[!] Faltan episodios. Activando ESCANEO BRUTAL en otras temporadas...")
+                for other_name in season_names:
+                    if other_name == selected_name: continue
+
+                    print(f"   Escaneando {other_name}...")
+                    other_url = seasons[other_name]['url']
+
+                    # Rastrear páginas de la otra temporada
+                    temp_url = other_url
+                    temp_visited = set()
+                    while temp_url and temp_url not in temp_visited:
+                        temp_visited.add(temp_url)
+                        pg_html = self.get_page_content(temp_url)
+                        pg_soup = BeautifulSoup(pg_html, 'html.parser')
+                        new_eps = self.extract_episodes(pg_soup, temp_url)
+                        for ne in new_eps:
+                            if not any(e['number'] == ne['number'] for e in episodes):
+                                episodes.append(ne)
+                                if start_ep <= ne['number'] <= end_ep:
+                                    to_download.append(ne)
+
+                        next_link = pg_soup.select_one('li.pager__item--next a, li.pager-next a, .pagination a[rel="next"], a.next')
+                        temp_url = urljoin(temp_url, next_link.get('href', '')) if next_link else None
+
+                episodes.sort(key=lambda x: x['number'])
+                to_download = [ep for ep in episodes if start_ep <= ep['number'] <= end_ep]
+
+            # Diagnóstico final
             if len(to_download) < (end_ep - start_ep + 1):
                 missing = [n for n in range(start_ep, end_ep + 1) if not any(e['number'] == n for e in episodes)]
                 if missing:
-                    logger.warning(f"Atención: Los siguientes episodios no se encontraron en esta temporada: {missing}")
                     print("\n--- DIAGNÓSTICO DE EPISODIOS FALTANTES ---")
-                    print(f"Páginas analizadas: {len(visited_urls)}")
                     print(f"Episodios totales detectados: {len(episodes)}")
-                    print(f"Rango solicitado: {start_ep} - {end_ep}")
                     print(f"Episodios no encontrados: {missing}")
-                    print("Posibles causas: Los episodios podrían estar en otra temporada o la paginación falló.")
 
             if not to_download:
                 print("\n[!] El rango seleccionado no contiene episodios detectables.")
