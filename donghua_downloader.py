@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.1.2"
+VERSION = "1.1.3"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -373,13 +373,14 @@ class DonghuaDownloader:
 
             season_info = seasons[selected_name]
             episodes = season_info.get('episodes', [])
+            visited_urls = set([url]) # Inicializar para diagnósticos
+            page_num = 1
 
             if not episodes:
                 print(f"Cargando lista de episodios (esto puede tardar si hay paginación)...")
                 current_url = season_info['url']
                 visited_urls = set()
 
-                page_num = 1
                 while current_url and current_url not in visited_urls:
                     print(f"   Escaneando página {page_num}...")
                     visited_urls.add(current_url)
@@ -427,7 +428,7 @@ class DonghuaDownloader:
                 if missing:
                     logger.warning(f"Atención: Los siguientes episodios no se encontraron en esta temporada: {missing}")
                     print("\n--- DIAGNÓSTICO DE EPISODIOS FALTANTES ---")
-                    print(f"Páginas escaneadas: {len(visited_urls)}")
+                    print(f"Páginas analizadas: {len(visited_urls)}")
                     print(f"Episodios totales detectados: {len(episodes)}")
                     print(f"Rango solicitado: {start_ep} - {end_ep}")
                     print(f"Episodios no encontrados: {missing}")
