@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -137,8 +137,9 @@ class DonghuaDownloader:
     def extract_episodes(self, soup, base_url):
         episodes = []
 
-        # Slug de la serie actual para filtrar
-        current_slug = base_url.rstrip('/').split('/')[-1].replace('season/', '').replace('series/', '')
+        # Slug de la serie actual para filtrar (ej: wan-jie-du-zun-2)
+        url_parts = base_url.rstrip('/').split('/')
+        current_slug = url_parts[-1].replace('season-', '').replace('series-', '')
 
         # Intentar limitar la búsqueda al contenido principal
         # Se añaden selectores más específicos para Drupal (donghualife)
@@ -149,10 +150,13 @@ class DonghuaDownloader:
         potential_links = main_content.find_all('a', href=re.compile(r'/episode/|episodio|capitulo'))
 
         links = []
+        # Normalizar el slug para una comparación más flexible (ej: wan-jie-du-zun)
+        base_slug = re.sub(r'-\d+$', '', current_slug)
+
         for l in potential_links:
             href = l.get('href', '')
-            # Filtro estricto: debe contener el slug de la serie actual
-            if current_slug in href and '/series/' not in href and '/season/' not in href:
+            # Filtro: debe contener el slug base o el slug completo
+            if (base_slug in href or current_slug in href) and '/series/' not in href and '/season/' not in href:
                 links.append(l)
 
         selectors = [
@@ -316,16 +320,21 @@ class DonghuaDownloader:
 
             # Intentar extraer el nombre de la serie
             # Buscar en breadcrumbs o títulos específicos primero
-            breadcrumb = soup.select_one('.breadcrumb, .breadcrumbs')
-            if breadcrumb:
-                links = breadcrumb.find_all('a')
-                if len(links) >= 2:
-                    # Preferir el último o penúltimo link que tenga texto relevante
-                    for link in reversed(links):
-                        text = link.get_text(strip=True)
-                        if text and text.lower() not in ["inicio", "donghuas", "episodios"]:
-                            self.series_name = self.sanitize_filename(text)
-                            break
+            # Preferir el H1 primero, ya que suele incluir el nombre completo con temporada
+            h1 = soup.select_one('#main-content h1, h1.page-title, #block-donghualife-page-title h1, h1')
+            if h1:
+                self.series_name = self.sanitize_filename(h1.get_text(strip=True))
+
+            if not self.series_name or self.series_name == "Donghua":
+                breadcrumb = soup.select_one('.breadcrumb, .breadcrumbs')
+                if breadcrumb:
+                    links = breadcrumb.find_all('a')
+                    if len(links) >= 2:
+                        for link in reversed(links):
+                            text = link.get_text(strip=True)
+                            if text and text.lower() not in ["inicio", "donghuas", "episodios"]:
+                                self.series_name = self.sanitize_filename(text)
+                                break
 
             if not self.series_name or self.series_name == "Donghua":
                 # En donghualife, el H1 suele estar dentro del bloque principal
@@ -370,7 +379,9 @@ class DonghuaDownloader:
                 current_url = season_info['url']
                 visited_urls = set()
 
+                page_num = 1
                 while current_url and current_url not in visited_urls:
+                    print(f"   Escaneando página {page_num}...")
                     visited_urls.add(current_url)
                     pg_html = self.get_page_content(current_url)
                     pg_soup = BeautifulSoup(pg_html, 'html.parser')
@@ -385,6 +396,7 @@ class DonghuaDownloader:
                     next_link = pg_soup.select_one('li.pager__item--next a, .pagination a[rel="next"]')
                     if next_link:
                         current_url = urljoin(current_url, next_link.get('href', ''))
+                        page_num += 1
                     else:
                         current_url = None
 
@@ -411,6 +423,13 @@ class DonghuaDownloader:
             if not to_download:
                 print("El rango seleccionado no contiene episodios.")
                 return
+
+            # Opción de exportar JSON para revisión
+            with open("donghua_detected.json", "w", encoding="utf-8") as f:
+                json.dump({'series': self.series_name, 'episodes': to_download}, f, indent=4, ensure_ascii=False)
+
+            print(f"\n[+] Se ha generado 'donghua_detected.json' con {len(to_download)} episodios.")
+            input("Presiona Enter para continuar con la descarga o Ctrl+C para cancelar y revisar el JSON...")
 
             qualities = self.get_available_qualities(to_download[0]['url'])
             print("\nCalidades disponibles detectadas:")
