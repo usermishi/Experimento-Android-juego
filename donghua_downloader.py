@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.1.3"
+VERSION = "1.1.4"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -260,8 +260,8 @@ class DonghuaDownloader:
 
     def sanitize_filename(self, name):
         """Limpia el nombre para que sea un nombre de archivo válido."""
-        # Eliminar palabras genéricas comunes
-        for word in ["Episodios", "Capítulos", "Inicio", "Temporada", "Donghua"]:
+        # Eliminar palabras genéricas comunes pero preservar números de temporada
+        for word in ["Episodios", "Capítulos", "Inicio", "Donghua"]:
             name = re.sub(rf"^{word}\s*[:\-]?\s*", "", name, flags=re.IGNORECASE)
             name = re.sub(rf"\s*[:\-]?\s*{word}$", "", name, flags=re.IGNORECASE)
 
@@ -373,33 +373,32 @@ class DonghuaDownloader:
 
             season_info = seasons[selected_name]
             episodes = season_info.get('episodes', [])
-            visited_urls = set([url]) # Inicializar para diagnósticos
+
+            # Siempre intentar rastrear todas las páginas para asegurar la lista completa
+            print(f"Cargando lista completa de episodios (esto puede tardar si hay paginación)...")
+            current_url = season_info['url']
+            visited_urls = set()
             page_num = 1
 
-            if not episodes:
-                print(f"Cargando lista de episodios (esto puede tardar si hay paginación)...")
-                current_url = season_info['url']
-                visited_urls = set()
+            while current_url and current_url not in visited_urls:
+                print(f"   Escaneando página {page_num}...")
+                visited_urls.add(current_url)
+                pg_html = self.get_page_content(current_url)
+                pg_soup = BeautifulSoup(pg_html, 'html.parser')
 
-                while current_url and current_url not in visited_urls:
-                    print(f"   Escaneando página {page_num}...")
-                    visited_urls.add(current_url)
-                    pg_html = self.get_page_content(current_url)
-                    pg_soup = BeautifulSoup(pg_html, 'html.parser')
+                new_eps = self.extract_episodes(pg_soup, current_url)
+                # Evitar duplicados
+                for ne in new_eps:
+                    if not any(e['number'] == ne['number'] for e in episodes):
+                        episodes.append(ne)
 
-                    new_eps = self.extract_episodes(pg_soup, current_url)
-                    # Evitar duplicados
-                    for ne in new_eps:
-                        if not any(e['number'] == ne['number'] for e in episodes):
-                            episodes.append(ne)
-
-                    # Buscar link a "Siguiente" o "Página X"
-                    next_link = pg_soup.select_one('li.pager__item--next a, li.pager-next a, .pagination a[rel="next"], a.next, .pager-next a')
-                    if next_link:
-                        current_url = urljoin(current_url, next_link.get('href', ''))
-                        page_num += 1
-                    else:
-                        current_url = None
+                # Buscar link a "Siguiente" o "Página X"
+                next_link = pg_soup.select_one('li.pager__item--next a, li.pager-next a, .pagination a[rel="next"], a.next, .pager-next a')
+                if next_link:
+                    current_url = urljoin(current_url, next_link.get('href', ''))
+                    page_num += 1
+                else:
+                    current_url = None
 
                 episodes.sort(key=lambda x: x['number'])
 
