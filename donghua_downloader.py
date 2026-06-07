@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.0.9"
+VERSION = "1.1.0"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -137,17 +137,22 @@ class DonghuaDownloader:
     def extract_episodes(self, soup, base_url):
         episodes = []
 
-        # Intentar limitar la búsqueda al contenido principal para evitar "Más populares" o "Más vistos"
-        main_content = soup.find(id="main-content") or soup.find("main") or soup.find("article") or \
-                       soup.select_one(".region-content, .block-system-main-block") or soup
+        # Slug de la serie actual para filtrar
+        current_slug = base_url.rstrip('/').split('/')[-1].replace('season/', '').replace('series/', '')
 
-        # Buscar enlaces de episodios (deben contener /episode/ y no /series/ ni /season/)
+        # Intentar limitar la búsqueda al contenido principal
+        # Se añaden selectores más específicos para Drupal (donghualife)
+        main_content = soup.select_one('#main-content, .region-content, .block-system-main-block, #block-donghualife-content') \
+                       or soup.find("main") or soup.find("article") or soup
+
+        # Buscar enlaces de episodios
         potential_links = main_content.find_all('a', href=re.compile(r'/episode/|episodio|capitulo'))
 
         links = []
         for l in potential_links:
             href = l.get('href', '')
-            if '/series/' not in href and '/season/' not in href:
+            # Filtro estricto: debe contener el slug de la serie actual
+            if current_slug in href and '/series/' not in href and '/season/' not in href:
                 links.append(l)
 
         selectors = [
@@ -314,11 +319,17 @@ class DonghuaDownloader:
             breadcrumb = soup.select_one('.breadcrumb, .breadcrumbs')
             if breadcrumb:
                 links = breadcrumb.find_all('a')
-                if len(links) >= 2: # El segundo suele ser la serie
-                    self.series_name = self.sanitize_filename(links[-1].get_text(strip=True))
+                if len(links) >= 2:
+                    # Preferir el último o penúltimo link que tenga texto relevante
+                    for link in reversed(links):
+                        text = link.get_text(strip=True)
+                        if text and text.lower() not in ["inicio", "donghuas", "episodios"]:
+                            self.series_name = self.sanitize_filename(text)
+                            break
 
             if not self.series_name or self.series_name == "Donghua":
-                h1 = soup.find('h1')
+                # En donghualife, el H1 suele estar dentro del bloque principal
+                h1 = soup.select_one('#main-content h1, h1.page-title, #block-donghualife-page-title h1, h1')
                 if h1:
                     self.series_name = self.sanitize_filename(h1.get_text(strip=True))
 
@@ -355,9 +366,29 @@ class DonghuaDownloader:
             episodes = season_info.get('episodes', [])
 
             if not episodes:
-                print(f"Cargando lista de episodios...")
-                html = self.get_page_content(season_info['url'])
-                episodes = self.extract_episodes(BeautifulSoup(html, 'html.parser'), season_info['url'])
+                print(f"Cargando lista de episodios (esto puede tardar si hay paginación)...")
+                current_url = season_info['url']
+                visited_urls = set()
+
+                while current_url and current_url not in visited_urls:
+                    visited_urls.add(current_url)
+                    pg_html = self.get_page_content(current_url)
+                    pg_soup = BeautifulSoup(pg_html, 'html.parser')
+
+                    new_eps = self.extract_episodes(pg_soup, current_url)
+                    # Evitar duplicados
+                    for ne in new_eps:
+                        if not any(e['number'] == ne['number'] for e in episodes):
+                            episodes.append(ne)
+
+                    # Buscar link a "Siguiente" o "Página X"
+                    next_link = pg_soup.select_one('li.pager__item--next a, .pagination a[rel="next"]')
+                    if next_link:
+                        current_url = urljoin(current_url, next_link.get('href', ''))
+                    else:
+                        current_url = None
+
+                episodes.sort(key=lambda x: x['number'])
 
             if not episodes:
                 print("Error: No se encontraron episodios en esta sección.")
