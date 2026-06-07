@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.1.5"
+VERSION = "1.1.6"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -69,7 +69,7 @@ class DonghuaDownloader:
                         continue
         return found_data
 
-    def scrape_seasons_and_episodes(self, url, html=None):
+    def scrape_seasons_and_episodes(self, url, html=None, deep=True):
         if not html:
             html = self.get_page_content(url)
         soup = BeautifulSoup(html, 'html.parser')
@@ -109,7 +109,9 @@ class DonghuaDownloader:
             '.temporadas a',
             '.season-links a',
             '.field--name-field-temporada a',
-            '.field--name-field-series a'
+            '.field--name-field-series a',
+            'a[href*="/series/"]', # Enlaces a la serie principal
+            'a[href*="/season/"]'  # Otros enlaces de temporadas
         ]
 
         season_links = []
@@ -128,7 +130,19 @@ class DonghuaDownloader:
                 name = link.get_text(strip=True) or f"Temporada {i+1}"
                 href = urljoin(url, link.get('href', ''))
                 if href and href != url and ('/season/' in href or '/series/' in href):
-                    seasons[name] = {'url': href, 'episodes': []}
+                    # Evitar duplicados por URL
+                    if not any(s['url'] == href for s in seasons.values()):
+                        seasons[name] = {'url': href, 'episodes': []}
+
+            # 3. Descubrimiento Profundo: Si es una página de temporada, buscar la página de la serie
+            if deep:
+                series_link = soup.select_one('a[href*="/series/"]')
+                if series_link:
+                    series_url = urljoin(url, series_link.get('href', ''))
+                    if series_url not in [s['url'] for s in seasons.values()]:
+                        logger.info(f"Descubierta serie principal: {series_url}")
+                        other_seasons = self.scrape_seasons_and_episodes(series_url, deep=False)
+                        seasons.update(other_seasons)
 
             if not seasons:
                 seasons['Temporada 1'] = {'url': url, 'episodes': self.extract_episodes(soup, url)}
@@ -157,8 +171,11 @@ class DonghuaDownloader:
         for l in potential_links:
             href = l.get('href', '')
             # Filtro: debe contener el slug base o el slug completo
+            # También permitimos links que contengan el nombre de la serie sin el prefijo /episode/
+            # siempre y cuando estemos en el bloque de contenido principal.
             if (base_slug in href or current_slug in href) and '/series/' not in href and '/season/' not in href:
-                links.append(l)
+                if l not in links:
+                    links.append(l)
 
         selectors = [
             '.episodes-list a', '.list-episodes a', '.ep-list a',
@@ -427,31 +444,34 @@ class DonghuaDownloader:
 
             to_download = [ep for ep in episodes if start_ep <= ep['number'] <= end_ep]
 
-            # MODO BRUTAL: Si faltan episodios, buscar en otras temporadas automáticamente
-            if len(to_download) < (end_ep - start_ep + 1) and len(season_names) > 1:
-                print("\n[!] Faltan episodios. Activando ESCANEO BRUTAL en otras temporadas...")
-                for other_name in season_names:
-                    if other_name == selected_name: continue
+            # MODO BRUTAL: Si faltan episodios, buscar en todas las temporadas detectadas
+            if len(to_download) < (end_ep - start_ep + 1):
+                print("\n[!] Activando ESCANEO BRUTAL para encontrar episodios faltantes...")
+                for s_name in season_names:
+                    if s_name == selected_name and len(visited_urls) > 1: continue # Ya escaneada
 
-                    print(f"   Escaneando {other_name}...")
-                    other_url = seasons[other_name]['url']
+                    print(f"   Analizando {s_name}...")
+                    s_url = seasons[s_name]['url']
+                    s_visited = set()
+                    curr_s_url = s_url
 
-                    # Rastrear páginas de la otra temporada
-                    temp_url = other_url
-                    temp_visited = set()
-                    while temp_url and temp_url not in temp_visited:
-                        temp_visited.add(temp_url)
-                        pg_html = self.get_page_content(temp_url)
+                    while curr_s_url and curr_s_url not in s_visited:
+                        s_visited.add(curr_s_url)
+                        # Evitar re-escanear si ya lo hicimos en el loop principal
+                        if curr_s_url in visited_urls and s_name == selected_name:
+                             # Buscar siguiente y continuar
+                             pg_html = self.get_page_content(curr_s_url)
+                        else:
+                             pg_html = self.get_page_content(curr_s_url)
+                             pg_soup = BeautifulSoup(pg_html, 'html.parser')
+                             new_eps = self.extract_episodes(pg_soup, curr_s_url)
+                             for ne in new_eps:
+                                 if not any(e['number'] == ne['number'] for e in episodes):
+                                     episodes.append(ne)
+
                         pg_soup = BeautifulSoup(pg_html, 'html.parser')
-                        new_eps = self.extract_episodes(pg_soup, temp_url)
-                        for ne in new_eps:
-                            if not any(e['number'] == ne['number'] for e in episodes):
-                                episodes.append(ne)
-                                if start_ep <= ne['number'] <= end_ep:
-                                    to_download.append(ne)
-
                         next_link = pg_soup.select_one('li.pager__item--next a, li.pager-next a, .pagination a[rel="next"], a.next')
-                        temp_url = urljoin(temp_url, next_link.get('href', '')) if next_link else None
+                        curr_s_url = urljoin(curr_s_url, next_link.get('href', '')) if next_link else None
 
                 episodes.sort(key=lambda x: x['number'])
                 to_download = [ep for ep in episodes if start_ep <= ep['number'] <= end_ep]
@@ -466,9 +486,18 @@ class DonghuaDownloader:
 
             if not to_download:
                 print("\n[!] El rango seleccionado no contiene episodios detectables.")
-                print("Revisa 'donghua_full_scan.json' para ver qué episodios se detectaron realmente.")
-                with open("donghua_full_scan.json", "w", encoding="utf-8") as f:
-                    json.dump({'series': self.series_name, 'all_detected_episodes': episodes}, f, indent=4, ensure_ascii=False)
+                print("Revisa 'donghua_discovery_report.json' para un análisis detallado.")
+                report = {
+                    'series': self.series_name,
+                    'total_episodes_found': len(episodes),
+                    'requested_range': [start_ep, end_ep],
+                    'found_range': [min_ep, max_ep] if episodes else [0,0],
+                    'detected_seasons': season_names,
+                    'all_detected_episodes': episodes,
+                    'cause': "Los episodios solicitados no están en ninguna de las temporadas detectadas automáticamente."
+                }
+                with open("donghua_discovery_report.json", "w", encoding="utf-8") as f:
+                    json.dump(report, f, indent=4, ensure_ascii=False)
                 return
 
             # Opción de exportar JSON para revisión
