@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.0.8"
+VERSION = "1.0.9"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -138,10 +138,17 @@ class DonghuaDownloader:
         episodes = []
 
         # Intentar limitar la búsqueda al contenido principal para evitar "Más populares" o "Más vistos"
-        main_content = soup.find(id="main-content") or soup.find("main") or soup.find("article") or soup
+        main_content = soup.find(id="main-content") or soup.find("main") or soup.find("article") or \
+                       soup.select_one(".region-content, .block-system-main-block") or soup
 
-        # Buscar enlaces de episodios
-        links = main_content.find_all('a', href=re.compile(r'episodio|episode|capitulo|cap-\d+|/episode/'))
+        # Buscar enlaces de episodios (deben contener /episode/ y no /series/ ni /season/)
+        potential_links = main_content.find_all('a', href=re.compile(r'/episode/|episodio|capitulo'))
+
+        links = []
+        for l in potential_links:
+            href = l.get('href', '')
+            if '/series/' not in href and '/season/' not in href:
+                links.append(l)
 
         selectors = [
             '.episodes-list a', '.list-episodes a', '.ep-list a',
@@ -244,7 +251,13 @@ class DonghuaDownloader:
 
     def sanitize_filename(self, name):
         """Limpia el nombre para que sea un nombre de archivo válido."""
-        return re.sub(r'[\\/*?:"<>|]', "", name).replace(" ", "_")
+        # Eliminar palabras genéricas comunes
+        for word in ["Episodios", "Capítulos", "Inicio", "Temporada", "Donghua"]:
+            name = re.sub(rf"^{word}\s*[:\-]?\s*", "", name, flags=re.IGNORECASE)
+            name = re.sub(rf"\s*[:\-]?\s*{word}$", "", name, flags=re.IGNORECASE)
+
+        sanitized = re.sub(r'[\\/*?:"<>|]', "", name).strip().replace(" ", "_")
+        return sanitized or "Donghua"
 
     def download_episode(self, ep_data, quality=480):
         print(f"\n>>> Preparando Episodio {ep_data['number']}...")
@@ -297,10 +310,19 @@ class DonghuaDownloader:
             soup = BeautifulSoup(html, 'html.parser')
 
             # Intentar extraer el nombre de la serie
-            h1 = soup.find('h1')
-            if h1:
-                self.series_name = self.sanitize_filename(h1.get_text(strip=True))
-            else:
+            # Buscar en breadcrumbs o títulos específicos primero
+            breadcrumb = soup.select_one('.breadcrumb, .breadcrumbs')
+            if breadcrumb:
+                links = breadcrumb.find_all('a')
+                if len(links) >= 2: # El segundo suele ser la serie
+                    self.series_name = self.sanitize_filename(links[-1].get_text(strip=True))
+
+            if not self.series_name or self.series_name == "Donghua":
+                h1 = soup.find('h1')
+                if h1:
+                    self.series_name = self.sanitize_filename(h1.get_text(strip=True))
+
+            if not self.series_name or self.series_name == "Donghua":
                 title_tag = soup.find('title')
                 if title_tag:
                     raw_title = title_tag.get_text(strip=True).split('|')[0].split('-')[0]
