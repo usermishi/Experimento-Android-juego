@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -393,7 +393,7 @@ class DonghuaDownloader:
                             episodes.append(ne)
 
                     # Buscar link a "Siguiente" o "Página X"
-                    next_link = pg_soup.select_one('li.pager__item--next a, .pagination a[rel="next"]')
+                    next_link = pg_soup.select_one('li.pager__item--next a, li.pager-next a, .pagination a[rel="next"], a.next, .pager-next a')
                     if next_link:
                         current_url = urljoin(current_url, next_link.get('href', ''))
                         page_num += 1
@@ -420,13 +420,29 @@ class DonghuaDownloader:
                 start_ep, end_ep = 1, max_ep
 
             to_download = [ep for ep in episodes if start_ep <= ep['number'] <= end_ep]
+
+            # Diagnóstico detallado si fallan episodios
+            if len(to_download) < (end_ep - start_ep + 1):
+                missing = [n for n in range(start_ep, end_ep + 1) if not any(e['number'] == n for e in episodes)]
+                if missing:
+                    logger.warning(f"Atención: Los siguientes episodios no se encontraron en esta temporada: {missing}")
+                    print("\n--- DIAGNÓSTICO DE EPISODIOS FALTANTES ---")
+                    print(f"Páginas escaneadas: {len(visited_urls)}")
+                    print(f"Episodios totales detectados: {len(episodes)}")
+                    print(f"Rango solicitado: {start_ep} - {end_ep}")
+                    print(f"Episodios no encontrados: {missing}")
+                    print("Posibles causas: Los episodios podrían estar en otra temporada o la paginación falló.")
+
             if not to_download:
-                print("El rango seleccionado no contiene episodios.")
+                print("\n[!] El rango seleccionado no contiene episodios detectables.")
+                print("Revisa 'donghua_full_scan.json' para ver qué episodios se detectaron realmente.")
+                with open("donghua_full_scan.json", "w", encoding="utf-8") as f:
+                    json.dump({'series': self.series_name, 'all_detected_episodes': episodes}, f, indent=4, ensure_ascii=False)
                 return
 
             # Opción de exportar JSON para revisión
             with open("donghua_detected.json", "w", encoding="utf-8") as f:
-                json.dump({'series': self.series_name, 'episodes': to_download}, f, indent=4, ensure_ascii=False)
+                json.dump({'series': self.series_name, 'episodes_to_download': to_download, 'all_available': episodes}, f, indent=4, ensure_ascii=False)
 
             print(f"\n[+] Se ha generado 'donghua_detected.json' con {len(to_download)} episodios.")
             input("Presiona Enter para continuar con la descarga o Ctrl+C para cancelar y revisar el JSON...")
