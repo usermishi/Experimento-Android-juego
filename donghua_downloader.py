@@ -27,7 +27,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.2.0"
+VERSION = "1.2.5"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -234,8 +234,12 @@ class DonghuaDownloader:
 
         return sorted(unique_eps.values(), key=lambda x: x['number'])
 
-    def find_embed_urls(self, ep_url):
-        html = self.get_page_content(ep_url)
+    def find_embed_urls(self, ep_url, html=None):
+        if not html:
+            try:
+                html = self.get_page_content(ep_url)
+            except:
+                return []
         soup = BeautifulSoup(html, 'html.parser')
         embeds = []
 
@@ -263,8 +267,9 @@ class DonghuaDownloader:
         scripts = soup.find_all('script')
         for script in scripts:
             if script.string:
-                # 3. Buscar variables de reproductor (como en el script complementario)
-                if "var player" in script.string or "jwplayer" in script.string:
+                # 3. Buscar variables de reproductor (v2.5 heuristics)
+                if any(x in script.string for x in ["var player", "player", "jwplayer"]):
+                    # Regex mejorado de v2.5
                     m = re.search(r'(https?://[^"\s]+\.(?:mp4|m3u8))', script.string)
                     if m: embeds.append(m.group(1).replace('\\', ''))
 
@@ -319,20 +324,31 @@ class DonghuaDownloader:
         sanitized = re.sub(r'[\\/*?:"<>|]', "", name).strip().replace(" ", "_")
         return sanitized or "Donghua"
 
-    def download_episode(self, ep_data, quality=480):
+    def download_episode(self, ep_data, quality=480, simulation=False):
         print(f"\n>>> Preparando Episodio {ep_data['number']}...")
 
-        target_urls = [ep_data['url']]
-        try:
-            embeds = self.find_embed_urls(ep_data['url'])
-            if embeds:
-                target_urls = embeds + target_urls
-        except:
-            pass
+        target_urls = []
 
-        # Predicción de URL directa de DonghuaLife como fallback
-        slug = self.series_name.lower().replace(" ", "-")
-        target_urls.append(f"https://donghualife.com/watch/{slug}-episode-{ep_data['number']}")
+        # 1. Intentar con URL de la página de reproducción (watch pattern)
+        slug = self.series_name.lower().replace(" ", "-").replace("_", "-")
+        watch_url = f"https://donghualife.com/watch/{slug}-episode-{ep_data['number']}"
+        target_urls.append(watch_url)
+
+        # 2. Intentar con URL original detectada
+        target_urls.append(ep_data['url'])
+
+        # 3. Descubrir embeds de las fuentes primarias
+        final_sources = []
+        for url in target_urls:
+            if "watch/" in url or "/episode/" in url:
+                embeds = self.find_embed_urls(url)
+                final_sources.extend(embeds)
+
+        final_sources.extend(target_urls)
+
+        # 4. Fallback CDN (v2.5 heuristic)
+        cdn_fallback = f"https://cdn.donghualife.com/files/mp4/{slug}-episode-{ep_data['number']}-{quality}p.mp4"
+        final_sources.append(cdn_fallback)
 
         # Carpeta de salida
         if not os.path.exists(self.output_folder):
@@ -367,14 +383,41 @@ class DonghuaDownloader:
             'progress_handlers': [TqdmProgress()],
         }
 
+        if simulation:
+            print(f"   [SIMULACIÓN] Probando fuentes para Ep {ep_data['number']}...")
+            for s in list(set(final_sources)):
+                print(f"   [SIMULACIÓN] Fuente detectada: {s}")
+            print(f"   [SIMULACIÓN] ¡{filename} marcado como completado!")
+            return
+
         success = False
-        for url in target_urls:
+        # Eliminar duplicados manteniendo orden
+        seen = set()
+        unique_sources = [x for x in final_sources if not (x in seen or seen.add(x))]
+
+        for url in unique_sources:
             try:
+                # Intento con yt-dlp
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([url])
                 success = True
                 break
             except:
+                # Si es un link directo mp4/m3u8, intentar descarga manual con requests
+                if ".mp4" in url:
+                    try:
+                        resp = self.session.get(url, stream=True, timeout=15)
+                        resp.raise_for_status()
+                        total = int(resp.headers.get('content-length', 0))
+                        with open(filename.replace("%(ext)s", "mp4"), 'wb') as f:
+                            with tqdm(total=total, unit='B', unit_scale=True, desc=f"Direct Ep {ep_data['number']}") as pbar:
+                                for chunk in resp.iter_content(1024*32):
+                                    f.write(chunk)
+                                    pbar.update(len(chunk))
+                        success = True
+                        break
+                    except:
+                        continue
                 continue
 
         if not success:
@@ -571,8 +614,11 @@ class DonghuaDownloader:
 
             print(f"Calidad elegida: {selected_quality}p\n")
 
+            sim_in = input("¿Deseas activar el MODO SIMULACIÓN (solo descubrir links)? (s/n) [n]: ").lower()
+            simulation_mode = True if sim_in == 's' else False
+
             for ep in to_download:
-                self.download_episode(ep, quality=selected_quality)
+                self.download_episode(ep, quality=selected_quality, simulation=simulation_mode)
 
             print("\n¡Todo el proceso ha finalizado correctamente!")
 
