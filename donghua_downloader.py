@@ -27,11 +27,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.3.5"
+VERSION = "1.4.0"
 
 class DonghuaDownloader:
     def __init__(self):
         self.log_file = "donghua_error.log"
+        self.magisterial_log = "donghua_magisterial_log.json"
+        self.filtering_trace = []
         self.series_name = "Donghua"
         self.output_folder = "Donghua_Descargas"
 
@@ -162,11 +164,22 @@ class DonghuaDownloader:
 
         return seasons
 
+    def add_trace(self, url, action, reason):
+        self.filtering_trace.append({
+            'timestamp': time.time(),
+            'url': url,
+            'action': action,
+            'reason': reason
+        })
+
     def extract_episodes(self, soup, base_url):
         episodes = []
-        url_parts = base_url.rstrip('/').split('/')
-        current_slug = url_parts[-1].replace('season-', '').replace('series-', '')
-        base_slug = re.sub(r'-\d+$', '', current_slug)
+
+        # Usar el filtro maestro definido en run()
+        base_slug = getattr(self, 'base_slug_filter', '')
+
+        # Traza de configuración de filtrado
+        self.add_trace(base_url, "CONFIG", f"Filtro base: {base_slug}")
 
         main_content = soup.select_one('#main-content, .region-content, .block-system-main-block, #block-donghualife-content') \
                        or soup.find("main") or soup.find("article") or soup
@@ -176,9 +189,19 @@ class DonghuaDownloader:
         links = []
         for l in potential_links:
             href = l.get('href', '')
-            if (base_slug in href or current_slug in href) and '/series/' not in href and '/season/' not in href:
-                if l not in links:
-                    links.append(l)
+
+            # Análisis detallado para el log magistral
+            if '/series/' in href or '/season/' in href:
+                self.add_trace(href, "REJECT", "Es un link de serie o temporada")
+                continue
+
+            if base_slug not in href:
+                self.add_trace(href, "REJECT", f"No coincide con slug maestro '{base_slug}'")
+                continue
+
+            if l not in links:
+                self.add_trace(href, "ACCEPT", "Coincide con filtros de episodio")
+                links.append(l)
 
         selectors = [
             '.episodes-list a', '.list-episodes a', '.ep-list a',
@@ -190,7 +213,7 @@ class DonghuaDownloader:
                 found_links = main_content.select(sel)
                 for fl in found_links:
                     href = fl.get('href', '')
-                    if (base_slug in href or current_slug in href) and '/series/' not in href and '/season/' not in href:
+                    if base_slug in href and '/series/' not in href and '/season/' not in href:
                         if fl not in links:
                             links.append(fl)
             except:
@@ -372,6 +395,11 @@ class DonghuaDownloader:
             url = input("Introduce la URL del Donghua: ").strip()
             if not url: return
 
+            # Extraer slug base de la URL principal de entrada
+            url_slug = url.rstrip('/').split('/')[-1].replace('season-', '').replace('series-', '')
+            self.base_slug_filter = re.sub(r'-\d+$', '', url_slug)
+            logger.info(f"Filtro maestro activado para: {self.base_slug_filter}")
+
             html = self.get_page_content(url)
             soup = BeautifulSoup(html, 'html.parser')
 
@@ -411,7 +439,14 @@ class DonghuaDownloader:
 
             all_episodes.sort(key=lambda x: x['number'])
             if not all_episodes:
-                print("No se encontraron episodios.")
+                print("\n[!] ERROR MAGISTRAL: No se detectaron episodios.")
+                print(f"Revisa '{self.magisterial_log}' para ver el rastro de filtrado.")
+                with open(self.magisterial_log, "w", encoding="utf-8") as f:
+                    json.dump({
+                        'url_inicial': url,
+                        'slug_maestro': self.base_slug_filter,
+                        'trace': self.filtering_trace
+                    }, f, indent=4, ensure_ascii=False)
                 return
 
             min_ep, max_ep = all_episodes[0]['number'], all_episodes[-1]['number']
