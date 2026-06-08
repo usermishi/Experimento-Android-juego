@@ -27,7 +27,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.4.0"
+VERSION = "1.4.1"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -92,11 +92,13 @@ class DonghuaDownloader:
 
         seasons = {}
 
-        # Slug de la serie actual para filtrar
-        url_parts = url.rstrip('/').split('/')
-        last_part = url_parts[-1]
-        current_slug = last_part.replace('season-', '').replace('series-', '')
-        base_slug = re.sub(r'-\d+$', '', current_slug)
+        # Usar el filtro maestro si existe
+        base_slug = getattr(self, 'base_slug_filter', '')
+        if not base_slug:
+            url_parts = url.rstrip('/').split('/')
+            last_part = url_parts[-1]
+            current_slug = last_part.replace('season-', '').replace('series-', '')
+            base_slug = re.sub(r'-\d+$', '', current_slug)
 
         # 1. Intentar mediante JSON
         json_data_list = self.find_json_in_html(html)
@@ -144,17 +146,37 @@ class DonghuaDownloader:
         for i, link in enumerate(season_links):
             name = link.get_text(strip=True) or f"Temporada {i+1}"
             href = urljoin(url, link.get('href', ''))
-            # Filtro estricto: la URL debe contener el slug base
-            if href and href != url and ('/season/' in href or '/series/' in href) and base_slug in href:
-                if not any(s['url'] == href for s in seasons.values()):
-                    seasons[name] = {'url': href, 'episodes': []}
+
+            # Trazar descubrimiento de temporadas
+            if href == url:
+                self.add_trace(href, "SEASON_SKIP", "Es la URL actual")
+                continue
+
+            if not ('/season/' in href or '/series/' in href):
+                self.add_trace(href, "SEASON_SKIP", "No es link de temporada/serie")
+                continue
+
+            if base_slug and base_slug not in href:
+                self.add_trace(href, "SEASON_REJECT", f"No coincide con slug base '{base_slug}'")
+                continue
+
+            if not any(s['url'] == href for s in seasons.values()):
+                self.add_trace(href, "SEASON_ACCEPT", f"Nueva temporada encontrada: {name}")
+                seasons[name] = {'url': href, 'episodes': []}
 
         # 3. Descubrimiento Profundo: Si es una página de temporada, buscar la página de la serie
         if deep:
+            # Buscar link de serie por patrón de URL o por breadcrumb
             series_link = soup.find('a', href=re.compile(rf'/series/{base_slug}$|/series/{base_slug}-'))
+            if not series_link:
+                # Fallback: buscar cualquier link /series/ que no sea sidebar
+                bc = soup.select_one('.breadcrumb, .breadcrumbs')
+                if bc: series_link = bc.find('a', href=re.compile(r'/series/'))
+
             if series_link:
                 series_url = urljoin(url, series_link.get('href', ''))
                 if series_url not in [s['url'] for s in seasons.values()]:
+                    self.add_trace(series_url, "DEEP_DISCOVERY", "Explorando serie principal")
                     logger.info(f"Descubierta serie principal: {series_url}")
                     other_seasons = self.scrape_seasons_and_episodes(series_url, deep=False)
                     seasons.update(other_seasons)
@@ -184,7 +206,7 @@ class DonghuaDownloader:
         main_content = soup.select_one('#main-content, .region-content, .block-system-main-block, #block-donghualife-content') \
                        or soup.find("main") or soup.find("article") or soup
 
-        potential_links = main_content.find_all('a', href=re.compile(r'/episode/|episodio|capitulo'))
+        potential_links = main_content.find_all('a', href=re.compile(r'/episode/|episodio|capitulo|cap-\d+'))
 
         links = []
         for l in potential_links:
@@ -192,15 +214,15 @@ class DonghuaDownloader:
 
             # Análisis detallado para el log magistral
             if '/series/' in href or '/season/' in href:
-                self.add_trace(href, "REJECT", "Es un link de serie o temporada")
+                self.add_trace(href, "REJECT_EP", "Es un link de serie o temporada")
                 continue
 
-            if base_slug not in href:
-                self.add_trace(href, "REJECT", f"No coincide con slug maestro '{base_slug}'")
+            if base_slug and base_slug not in href:
+                self.add_trace(href, "REJECT_EP", f"No coincide con slug maestro '{base_slug}'")
                 continue
 
             if l not in links:
-                self.add_trace(href, "ACCEPT", "Coincide con filtros de episodio")
+                self.add_trace(href, "ACCEPT_EP", "Coincide con filtros de episodio")
                 links.append(l)
 
         selectors = [
@@ -403,9 +425,17 @@ class DonghuaDownloader:
             html = self.get_page_content(url)
             soup = BeautifulSoup(html, 'html.parser')
 
-            h1 = soup.select_one('#main-content h1, h1.page-title, #block-donghualife-page-title h1, h1')
-            if h1: self.series_name = self.sanitize_filename(h1.get_text(strip=True))
+            # 1. Metadatos (OG Title)
+            og_title = soup.find("meta", property="og:title")
+            if og_title and og_title.get("content"):
+                self.series_name = self.sanitize_filename(og_title["content"].split("|")[0].split("-")[0])
 
+            # 2. H1 (Suele ser lo más preciso)
+            if not self.series_name or self.series_name == "Donghua":
+                h1 = soup.select_one('#main-content h1, h1.page-title, #block-donghualife-page-title h1, h1')
+                if h1: self.series_name = self.sanitize_filename(h1.get_text(strip=True))
+
+            # 3. Breadcrumbs
             if not self.series_name or self.series_name == "Donghua":
                 breadcrumb = soup.select_one('.breadcrumb, .breadcrumbs')
                 if breadcrumb:
