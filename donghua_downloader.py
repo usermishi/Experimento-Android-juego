@@ -27,7 +27,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.4.2"
+VERSION = "1.5.0"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -347,13 +347,29 @@ class DonghuaDownloader:
         sanitized = re.sub(r'[\\/*?:"<>|]', "", name).strip().replace(" ", "_")
         return sanitized or "Donghua"
 
-    def download_episode(self, ep_data, quality=480, simulation=False):
-        print(f"\n>>> Preparando Episodio {ep_data['number']}...")
+    def download_episode(self, ep_num, ep_data=None, quality=480, simulation=False):
+        print(f"\n>>> Preparando Episodio {ep_num}...")
 
         target_urls = []
         slug = self.series_name.lower().replace(" ", "-").replace("_", "-")
-        target_urls.append(f"https://donghualife.com/watch/{slug}-episode-{ep_data['number']}")
-        target_urls.append(ep_data['url'])
+        base_slug = getattr(self, 'base_slug_filter', slug)
+
+        # 1. Predicción Brutal de URLs (como en el script complementario)
+        patterns = [
+            f"https://donghualife.com/episode/{base_slug}-x{ep_num}",
+            f"https://donghualife.com/episode/{base_slug}-{ep_num}",
+            f"https://donghualife.com/episode/{slug}-x{ep_num}",
+            f"https://donghualife.com/watch/{base_slug}-episode-{ep_num}",
+            f"https://donghualife.com/watch/{slug}-episode-{ep_num}",
+        ]
+        for p in patterns:
+            self.add_trace(p, "PREDICT", f"Patrón generado para Ep {ep_num}")
+            target_urls.append(p)
+
+        # 2. Añadir URL detectada por scraping si existe
+        if ep_data and ep_data.get('url'):
+            self.add_trace(ep_data['url'], "SCRAPED", f"URL previa para Ep {ep_num}")
+            target_urls.append(ep_data['url'])
 
         final_sources = []
         for url in target_urls:
@@ -361,11 +377,11 @@ class DonghuaDownloader:
                 embeds = self.find_embed_urls(url)
                 final_sources.extend(embeds)
         final_sources.extend(target_urls)
-        final_sources.append(f"https://cdn.donghualife.com/files/mp4/{slug}-episode-{ep_data['number']}-{quality}p.mp4")
+        final_sources.append(f"https://cdn.donghualife.com/files/mp4/{slug}-episode-{ep_num}-{quality}p.mp4")
 
         if not os.path.exists(self.output_folder): os.makedirs(self.output_folder)
         safe_name = self.series_name.replace(" ", "_")
-        filename = os.path.join(self.output_folder, f"{safe_name}_Ep_{ep_data['number']}.%(ext)s")
+        filename = os.path.join(self.output_folder, f"{safe_name}_Ep_{ep_num}.%(ext)s")
 
         class TqdmProgress:
             def __init__(self): self.pbar = None
@@ -497,16 +513,11 @@ class DonghuaDownloader:
                 end_ep = int(input(f"Episodio final [{max_ep}]: ") or str(max_ep))
             except: start_ep, end_ep = 1, max_ep
 
-            to_download = [ep for ep in all_episodes if start_ep <= ep['number'] <= end_ep]
+            # Permitir cualquier rango, incluso si no se detectaron episodios (vía predicción)
+            ep_map = {ep['number']: ep for ep in all_episodes}
 
-            if not to_download:
-                print("\n[!] El rango no contiene episodios.")
-                report = {'series': self.series_name, 'episodes': all_episodes}
-                with open("donghua_pro_analysis.json", "w", encoding="utf-8") as f:
-                    json.dump(report, f, indent=4, ensure_ascii=False)
-                return
-
-            qualities = self.get_available_qualities(to_download[0]['url'])
+            probe_url = ep_map[start_ep]['url'] if start_ep in ep_map else all_episodes[0]['url']
+            qualities = self.get_available_qualities(probe_url)
             print("\nCalidades disponibles:")
             for i, q in enumerate(qualities): print(f"  {i+1}. {q}p")
 
@@ -519,8 +530,9 @@ class DonghuaDownloader:
             sim_in = input("¿Modo Simulación? (s/n) [n]: ").lower()
             simulation_mode = True if sim_in == 's' else False
 
-            for ep in to_download:
-                self.download_episode(ep, quality=selected_quality, simulation=simulation_mode)
+            for ep_num in range(start_ep, end_ep + 1):
+                ep_data = ep_map.get(ep_num)
+                self.download_episode(ep_num, ep_data=ep_data, quality=selected_quality, simulation=simulation_mode)
             print("\n¡Todo listo!")
 
         except Exception as e:
