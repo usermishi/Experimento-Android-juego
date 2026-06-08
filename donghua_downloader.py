@@ -27,7 +27,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.4.1"
+VERSION = "1.4.2"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -164,14 +164,18 @@ class DonghuaDownloader:
                 self.add_trace(href, "SEASON_ACCEPT", f"Nueva temporada encontrada: {name}")
                 seasons[name] = {'url': href, 'episodes': []}
 
-        # 3. Descubrimiento Profundo: Si es una página de temporada, buscar la página de la serie
+        # 3. Descubrimiento Profundo: Si es una página de temporada o episodio, buscar la página de la serie
         if deep:
             # Buscar link de serie por patrón de URL o por breadcrumb
             series_link = soup.find('a', href=re.compile(rf'/series/{base_slug}$|/series/{base_slug}-'))
             if not series_link:
+                # Buscar link de temporada actual (para luego saltar a serie)
+                series_link = soup.find('a', href=re.compile(rf'/season/{base_slug}-\d+'))
+
+            if not series_link:
                 # Fallback: buscar cualquier link /series/ que no sea sidebar
-                bc = soup.select_one('.breadcrumb, .breadcrumbs')
-                if bc: series_link = bc.find('a', href=re.compile(r'/series/'))
+                bc = soup.select_one('.breadcrumb, .breadcrumbs, .node-header, .series-title')
+                if bc: series_link = bc.find('a', href=re.compile(r'/series/|/season/'))
 
             if series_link:
                 series_url = urljoin(url, series_link.get('href', ''))
@@ -417,8 +421,13 @@ class DonghuaDownloader:
             url = input("Introduce la URL del Donghua: ").strip()
             if not url: return
 
-            # Extraer slug base de la URL principal de entrada
-            url_slug = url.rstrip('/').split('/')[-1].replace('season-', '').replace('series-', '')
+            # Extraer slug base de la URL principal de entrada (Soporte para /episode/, /season/, /series/)
+            slug_part = url.rstrip('/').split('/')[-1]
+            # Limpiar prefijos y sufijos de episodios
+            url_slug = re.sub(r'-x\d+$|-episode-\d+$|-episodio-\d+$|-capitulo-\d+$', '', slug_part)
+            url_slug = url_slug.replace('season-', '').replace('series-', '')
+
+            # Slug base (sin el número de temporada al final si lo hay)
             self.base_slug_filter = re.sub(r'-\d+$', '', url_slug)
             logger.info(f"Filtro maestro activado para: {self.base_slug_filter}")
 
