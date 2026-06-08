@@ -27,7 +27,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.2.5"
+VERSION = "1.3.0"
 
 class DonghuaDownloader:
     def __init__(self):
@@ -114,8 +114,9 @@ class DonghuaDownloader:
                                 'title': ep.get('title', f"Episodio {num}")
                             })
 
+        # El JSON solo se usa para añadir episodios iniciales, pero NO detenemos la búsqueda profunda
         if seasons and any(s['episodes'] for s in seasons.values()):
-            return seasons
+            logger.info("Añadidos episodios iniciales vía JSON.")
 
         # 2. Intentar mediante Selectores CSS
         season_selectors = [
@@ -577,9 +578,10 @@ class DonghuaDownloader:
                     print(f"Episodios totales detectados: {len(episodes)}")
                     print(f"Episodios no encontrados: {missing}")
 
+            # Estudiar la estructura para el reporte pro
             if not to_download:
                 print("\n[!] El rango seleccionado no contiene episodios detectables.")
-                print("Revisa 'donghua_discovery_report.json' para un análisis detallado.")
+                print("Revisa 'donghua_pro_analysis.json' para un estudio profundo de la serie.")
                 report = {
                     'series': self.series_name,
                     'total_episodes_found': len(episodes),
@@ -589,7 +591,7 @@ class DonghuaDownloader:
                     'all_detected_episodes': episodes,
                     'cause': "Los episodios solicitados no están en ninguna de las temporadas detectadas automáticamente."
                 }
-                with open("donghua_discovery_report.json", "w", encoding="utf-8") as f:
+                with open("donghua_pro_analysis.json", "w", encoding="utf-8") as f:
                     json.dump(report, f, indent=4, ensure_ascii=False)
                 return
 
