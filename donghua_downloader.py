@@ -9,6 +9,13 @@ from bs4 import BeautifulSoup
 import yt_dlp
 import re
 from urllib.parse import urljoin
+import time
+from tqdm import tqdm
+
+try:
+    import cloudscraper
+except ImportError:
+    cloudscraper = None
 
 # Configuración de logging
 logging.basicConfig(
@@ -20,15 +27,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-VERSION = "1.1.6"
+VERSION = "1.2.0"
 
 class DonghuaDownloader:
     def __init__(self):
         self.log_file = "donghua_error.log"
         self.series_name = "Donghua"
-        self.session = requests.Session()
+        self.output_folder = "Donghua_Descargas"
+
+        if cloudscraper:
+            self.session = cloudscraper.create_scraper()
+            logger.info("Cloudscraper activado para evadir protecciones.")
+        else:
+            self.session = requests.Session()
+
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://donghualife.com/',
+            'Origin': 'https://donghualife.com'
         })
 
     def get_page_content(self, url, retries=3):
@@ -223,7 +239,14 @@ class DonghuaDownloader:
         soup = BeautifulSoup(html, 'html.parser')
         embeds = []
 
-        # Servidores comunes a buscar
+        # 1. Buscar en etiquetas <source> (Direct MP4/M3U8)
+        sources = soup.find_all('source')
+        for src in sources:
+            s_url = src.get('src')
+            if s_url:
+                embeds.append(urljoin(ep_url, s_url))
+
+        # 2. Servidores comunes a buscar
         server_patterns = [
             'dailymotion.com', 'ok.ru', 'rumble.com', 'voe.sx', 'vidoza.net',
             'filemoon', 'streamwish', 'vidhide', 'filelions', 'streamtape',
@@ -240,6 +263,11 @@ class DonghuaDownloader:
         scripts = soup.find_all('script')
         for script in scripts:
             if script.string:
+                # 3. Buscar variables de reproductor (como en el script complementario)
+                if "var player" in script.string or "jwplayer" in script.string:
+                    m = re.search(r'(https?://[^"\s]+\.(?:mp4|m3u8))', script.string)
+                    if m: embeds.append(m.group(1).replace('\\', ''))
+
                 # Regex más amplia para capturar URLs de servidores
                 pattern = r'(https?://[^\s"\']+(?:' + '|'.join(server_patterns).replace('.', r'\.') + r')[^\s"\']*)'
                 matches = re.findall(pattern, script.string, re.IGNORECASE)
@@ -302,11 +330,32 @@ class DonghuaDownloader:
         except:
             pass
 
+        # Predicción de URL directa de DonghuaLife como fallback
+        slug = self.series_name.lower().replace(" ", "-")
+        target_urls.append(f"https://donghualife.com/watch/{slug}-episode-{ep_data['number']}")
+
+        # Carpeta de salida
+        if not os.path.exists(self.output_folder):
+            os.makedirs(self.output_folder)
+
         # Usar el nombre de la serie en el archivo
-        filename = f"{self.series_name}_Ep_{ep_data['number']}.%(ext)s"
+        safe_name = self.series_name.replace(" ", "_")
+        filename = os.path.join(self.output_folder, f"{safe_name}_Ep_{ep_data['number']}.%(ext)s")
+
+        class TqdmProgress:
+            def __init__(self):
+                self.pbar = None
+            def __call__(self, d):
+                if d['status'] == 'downloading':
+                    if self.pbar is None:
+                        total = d.get('total_bytes') or d.get('total_bytes_estimate')
+                        self.pbar = tqdm(total=total, unit='B', unit_scale=True, desc=f"Ep {ep_data['number']}")
+                    self.pbar.update(d.get('downloaded_bytes', 0) - self.pbar.n)
+                elif d['status'] == 'finished':
+                    if self.pbar:
+                        self.pbar.close()
 
         ydl_opts = {
-            # Selecciona la mejor calidad menor o igual a la solicitada
             'format': f'bestvideo[height<={quality}][vcodec^=avc1]+bestaudio[acodec^=mp4a]/best[height<={quality}]/best',
             'outtmpl': filename,
             'noplaylist': True,
@@ -314,11 +363,12 @@ class DonghuaDownloader:
             'merge_output_format': 'mp4',
             'user_agent': self.session.headers['User-Agent'],
             'no_warnings': True,
+            'quiet': True,
+            'progress_handlers': [TqdmProgress()],
         }
 
         success = False
         for url in target_urls:
-            print(f"   Intentando descargar de: {url}")
             try:
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([url])
